@@ -31,91 +31,57 @@ from .config import (
     save_recent_folders
 )
 
-# Try to import Qt for native file dialogs (workaround for PyWebView Qt backend bug)
-try:
-    from PyQt6.QtWidgets import QApplication, QFileDialog
-    from PyQt6.QtCore import QMetaObject, Qt, Q_ARG, QThread
-    HAS_QT = True
-except ImportError:
-    HAS_QT = False
-
-# Thread-safe storage for dialog results
-_dialog_result = [None]
-
-
-def _qt_select_folder(title: str = "Select Folder") -> Optional[str]:
-    """Open a Qt folder selection dialog (thread-safe)."""
-    if not HAS_QT:
-        return None
-    
-    app = QApplication.instance()
-    if app is None:
-        return None
-    
-    # Use a simple blocking approach with native Windows dialog
-    import ctypes
-    from ctypes import wintypes
-    
-    # Use Windows native folder browser (SHBrowseForFolder)
+# Use tkinter for native file dialogs (built-in, modern Windows dialogs)
+def _select_folder(title: str = "Select Folder") -> Optional[str]:
+    """Open a native folder selection dialog using tkinter."""
     try:
-        import subprocess
-        # Use PowerShell to show folder dialog
-        ps_script = '''
-        Add-Type -AssemblyName System.Windows.Forms
-        $dialog = New-Object System.Windows.Forms.FolderBrowserDialog
-        $dialog.Description = "''' + title + '''"
-        $dialog.ShowNewFolderButton = $true
-        if ($dialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
-            Write-Output $dialog.SelectedPath
-        }
-        '''
-        result = subprocess.run(
-            ['powershell', '-Command', ps_script],
-            capture_output=True,
-            text=True,
-            creationflags=subprocess.CREATE_NO_WINDOW
-        )
-        folder = result.stdout.strip()
+        import tkinter as tk
+        from tkinter import filedialog
+        
+        # Create hidden root window
+        root = tk.Tk()
+        root.withdraw()
+        root.attributes('-topmost', True)  # Bring dialog to front
+        
+        folder = filedialog.askdirectory(title=title)
+        
+        root.destroy()
         return folder if folder else None
     except Exception:
         return None
 
 
-def _qt_select_file(title: str = "Select File", file_filter: str = "") -> Optional[str]:
-    """Open a Qt file selection dialog (thread-safe)."""
-    if not HAS_QT:
-        return None
-    
-    app = QApplication.instance()
-    if app is None:
-        return None
-    
-    # Use Windows native file dialog via PowerShell
+def _select_file(title: str = "Select File", filetypes: list = None) -> Optional[str]:
+    """Open a native file selection dialog using tkinter."""
     try:
-        import subprocess
-        # Convert Qt filter format to Windows format
-        # "Image Files (*.png *.jpg);;All Files (*)" -> "Image Files|*.png;*.jpg|All Files|*.*"
-        win_filter = "Image Files|*.png;*.jpg;*.jpeg;*.gif;*.bmp;*.webp|All Files|*.*"
+        import tkinter as tk
+        from tkinter import filedialog
         
-        ps_script = '''
-        Add-Type -AssemblyName System.Windows.Forms
-        $dialog = New-Object System.Windows.Forms.OpenFileDialog
-        $dialog.Title = "''' + title + '''"
-        $dialog.Filter = "''' + win_filter + '''"
-        if ($dialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
-            Write-Output $dialog.FileName
-        }
-        '''
-        result = subprocess.run(
-            ['powershell', '-Command', ps_script],
-            capture_output=True,
-            text=True,
-            creationflags=subprocess.CREATE_NO_WINDOW
-        )
-        file_path = result.stdout.strip()
+        if filetypes is None:
+            filetypes = [
+                ("Image Files", "*.png *.jpg *.jpeg *.gif *.bmp *.webp"),
+                ("All Files", "*.*")
+            ]
+        
+        # Create hidden root window
+        root = tk.Tk()
+        root.withdraw()
+        root.attributes('-topmost', True)  # Bring dialog to front
+        
+        file_path = filedialog.askopenfilename(title=title, filetypes=filetypes)
+        
+        root.destroy()
         return file_path if file_path else None
     except Exception:
         return None
+
+
+# Keep HAS_QT for compatibility but we now use tkinter for dialogs
+try:
+    from PyQt6.QtWidgets import QApplication
+    HAS_QT = True
+except ImportError:
+    HAS_QT = False
 
 
 class Api:
@@ -180,31 +146,10 @@ class Api:
         Returns:
             Selected folder path, or None if cancelled
         """
-        # Use Qt dialog directly (workaround for PyWebView Qt backend bug)
-        if HAS_QT:
-            folder = _qt_select_folder("Select Input Folder")
-            if folder:
-                save_recent_folders(input_folder=folder)
-                return folder
-            return None
-        
-        # Fallback to PyWebView dialog
-        if not self._window:
-            return None
-        
-        try:
-            result = self._window.create_file_dialog(
-                dialog_type=3,  # FOLDER_DIALOG
-                directory='',
-                allow_multiple=False
-            )
-            
-            if result and len(result) > 0:
-                folder = result[0]
-                save_recent_folders(input_folder=folder)
-                return folder
-        except (TypeError, Exception):
-            pass
+        folder = _select_folder("Select Input Folder")
+        if folder:
+            save_recent_folders(input_folder=folder)
+            return folder
         return None
     
     def select_output_folder(self) -> Optional[str]:
@@ -214,31 +159,10 @@ class Api:
         Returns:
             Selected folder path, or None if cancelled
         """
-        # Use Qt dialog directly (workaround for PyWebView Qt backend bug)
-        if HAS_QT:
-            folder = _qt_select_folder("Select Output Folder")
-            if folder:
-                save_recent_folders(output_folder=folder)
-                return folder
-            return None
-        
-        # Fallback to PyWebView dialog
-        if not self._window:
-            return None
-        
-        try:
-            result = self._window.create_file_dialog(
-                dialog_type=3,  # FOLDER_DIALOG
-                directory='',
-                allow_multiple=False
-            )
-            
-            if result and len(result) > 0:
-                folder = result[0]
-                save_recent_folders(output_folder=folder)
-                return folder
-        except (TypeError, Exception):
-            pass
+        folder = _select_folder("Select Output Folder")
+        if folder:
+            save_recent_folders(output_folder=folder)
+            return folder
         return None
     
     def select_watermark_file(self) -> Optional[str]:
@@ -248,30 +172,7 @@ class Api:
         Returns:
             Selected file path, or None if cancelled
         """
-        # Use Qt dialog directly (workaround for PyWebView Qt backend bug)
-        if HAS_QT:
-            file_filter = "Image Files (*.png *.jpg *.jpeg *.gif *.bmp *.webp);;All Files (*)"
-            return _qt_select_file("Select Watermark Image", file_filter)
-        
-        # Fallback to PyWebView dialog
-        if not self._window:
-            return None
-        
-        try:
-            extensions = ['*.png', '*.jpg', '*.jpeg', '*.gif', '*.bmp', '*.webp']
-            
-            result = self._window.create_file_dialog(
-                dialog_type=1,  # OPEN_DIALOG
-                directory='',
-                allow_multiple=False,
-                file_types=['Image Files (' + ', '.join(extensions) + ')']
-            )
-            
-            if result and len(result) > 0:
-                return result[0]
-        except (TypeError, Exception):
-            pass
-        return None
+        return _select_file("Select Watermark Image")
     
     def select_preview_image(self) -> Optional[str]:
         """
@@ -280,30 +181,7 @@ class Api:
         Returns:
             Selected file path, or None if cancelled
         """
-        # Use Qt dialog directly (workaround for PyWebView Qt backend bug)
-        if HAS_QT:
-            file_filter = "Image Files (*.png *.jpg *.jpeg *.gif *.bmp *.webp);;All Files (*)"
-            return _qt_select_file("Select Preview Image", file_filter)
-        
-        # Fallback to PyWebView dialog
-        if not self._window:
-            return None
-        
-        try:
-            extensions = ['*.png', '*.jpg', '*.jpeg', '*.gif', '*.bmp', '*.webp']
-            
-            result = self._window.create_file_dialog(
-                dialog_type=1,  # OPEN_DIALOG
-                directory='',
-                allow_multiple=False,
-                file_types=['Image Files (' + ', '.join(extensions) + ')']
-            )
-            
-            if result and len(result) > 0:
-                return result[0]
-        except (TypeError, Exception):
-            pass
-        return None
+        return _select_file("Select Preview Image")
     
     # ==================== Configuration ====================
     
