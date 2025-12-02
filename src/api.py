@@ -18,7 +18,7 @@ import threading
 from typing import Dict, Any, Optional, List
 from dataclasses import asdict
 
-from .image_processor import generate_preview, SUPPORTED_FORMATS
+from .image_processor import generate_preview as generate_image_preview, SUPPORTED_FORMATS
 from .batch_processor import (
     BatchProcessor,
     ProcessingConfig,
@@ -254,6 +254,7 @@ class Api:
                 output_folder=config_dict.get('output_folder', ''),
                 border_thickness=int(config_dict.get('border_thickness', 0)),
                 border_color=config_dict.get('border_color', '#FFFFFF'),
+                saturation=int(config_dict.get('saturation', 100)),
                 watermarks=watermarks,
                 filename_prefix=config_dict.get('filename_prefix', ''),
                 filename_suffix=config_dict.get('filename_suffix', ''),
@@ -300,10 +301,20 @@ class Api:
                         'margin': int(wm.get('margin', 20))
                     })
             
-            image_bytes, error = generate_preview(
+            saturation = int(config_dict.get('saturation', 100))
+            border_thickness = int(config_dict.get('border_thickness', 0)) or None
+            
+            # Debug logging
+            print(f"[DEBUG] generate_preview called:")
+            print(f"  - saturation from config: {config_dict.get('saturation')} -> parsed: {saturation}")
+            print(f"  - border_thickness: {border_thickness}")
+            print(f"  - passing saturation to processor: {saturation if saturation != 100 else None}")
+            
+            image_bytes, error = generate_image_preview(
                 input_path=image_path,
-                border_thickness=int(config_dict.get('border_thickness', 0)) or None,
+                border_thickness=border_thickness,
                 border_color=config_dict.get('border_color', '#FFFFFF'),
+                saturation=saturation if saturation != 100 else None,
                 watermarks=watermarks if watermarks else None
             )
             
@@ -382,6 +393,7 @@ class Api:
                 output_folder=config_dict.get('output_folder', ''),
                 border_thickness=int(config_dict.get('border_thickness', 0)),
                 border_color=config_dict.get('border_color', '#FFFFFF'),
+                saturation=int(config_dict.get('saturation', 100)),
                 watermarks=watermarks,
                 filename_prefix=config_dict.get('filename_prefix', ''),
                 filename_suffix=config_dict.get('filename_suffix', ''),

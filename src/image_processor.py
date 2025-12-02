@@ -36,6 +36,31 @@ def is_supported_format(filepath: str) -> bool:
     return ext in SUPPORTED_FORMATS
 
 
+def adjust_saturation(
+    image: Image,
+    saturation: int = 100
+) -> None:
+    """
+    Adjust the saturation of an image (in-place modification).
+    
+    Args:
+        image: Wand Image object to modify
+        saturation: Saturation level as percentage (0-200)
+            - 0 = Grayscale (no color)
+            - 100 = Original saturation (no change)
+            - 200 = Double saturation (very vibrant)
+            
+    Raises:
+        ValueError: If saturation is outside valid range
+    """
+    if not (0 <= saturation <= 200):
+        raise ValueError(f"Saturation must be between 0 and 200, got {saturation}")
+    
+    # modulate() expects float percentages: brightness, saturation, hue
+    # 100.0 = no change for all three parameters
+    image.modulate(brightness=100.0, saturation=float(saturation), hue=100.0)
+
+
 def add_border(
     image: Image,
     thickness: int,
@@ -162,23 +187,26 @@ def process_single_image(
     output_path: str,
     border_thickness: Optional[int] = None,
     border_color: str = "#FFFFFF",
+    saturation: Optional[int] = None,
     watermarks: Optional[List[dict]] = None,
     preserve_format: bool = True
 ) -> dict:
     """
-    Process a single image: apply border and/or watermarks, then save.
+    Process a single image: apply saturation, border and/or watermarks, then save.
     
     This function handles the complete pipeline for one image:
     1. Load the image
-    2. Apply border (if specified)
-    3. Apply watermarks (if specified) - multiple watermarks supported
-    4. Save to output path
+    2. Apply saturation adjustment (if specified)
+    3. Apply border (if specified)
+    4. Apply watermarks (if specified) - multiple watermarks supported
+    5. Save to output path
     
     Args:
         input_path: Path to the source image
         output_path: Path where processed image will be saved
         border_thickness: Border thickness in pixels (None = no border)
         border_color: Border color as hex string
+        saturation: Saturation level 0-200 (100 = original, None = no change)
         watermarks: List of watermark configs, each with keys:
             - path: Path to watermark image
             - position: One of the 9 positions
@@ -216,7 +244,11 @@ def process_single_image(
         
         # Load and process image
         with Image(filename=input_path) as img:
-            # Apply border first (so watermarks go on top of border)
+            # Apply saturation adjustment first (before border/watermarks)
+            if saturation is not None and saturation != 100:
+                adjust_saturation(img, saturation)
+            
+            # Apply border (so watermarks go on top of border)
             if border_thickness is not None and border_thickness > 0:
                 add_border(img, border_thickness, border_color)
             
@@ -256,6 +288,7 @@ def generate_preview(
     input_path: str,
     border_thickness: Optional[int] = None,
     border_color: str = "#FFFFFF",
+    saturation: Optional[int] = None,
     watermarks: Optional[List[dict]] = None,
     max_preview_size: int = 800
 ) -> Tuple[Optional[bytes], Optional[str]]:
@@ -268,6 +301,7 @@ def generate_preview(
         input_path: Path to the source image
         border_thickness: Border thickness in pixels
         border_color: Border color as hex
+        saturation: Saturation level 0-200 (100 = original, None = no change)
         watermarks: List of watermark configs (same format as process_single_image)
         max_preview_size: Maximum width or height for preview
         
@@ -284,6 +318,16 @@ def generate_preview(
             return None, f"Unsupported format: {os.path.splitext(input_path)[1]}"
         
         with Image(filename=input_path) as img:
+            # Debug logging
+            print(f"[DEBUG] generate_preview image_processor:")
+            print(f"  - saturation param: {saturation}")
+            print(f"  - will apply saturation: {saturation is not None and saturation != 100}")
+            
+            # Apply saturation adjustment first
+            if saturation is not None and saturation != 100:
+                print(f"  - APPLYING saturation: {saturation}")
+                adjust_saturation(img, saturation)
+            
             # Apply border
             if border_thickness is not None and border_thickness > 0:
                 add_border(img, border_thickness, border_color)

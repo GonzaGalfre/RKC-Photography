@@ -12,6 +12,7 @@ const state = {
         output_folder: '',
         border_thickness: 0,
         border_color: '#FFFFFF',
+        saturation: 100,  // 100 = original, 0 = grayscale, >100 = more saturated
         watermarks: [],  // Array of {path, position, opacity, scale, margin}
         filename_prefix: '',
         filename_suffix: '',
@@ -44,6 +45,11 @@ const elements = {
     borderColorHex: document.getElementById('border-color-hex'),
     colorPresets: document.querySelectorAll('.color-preset'),
     
+    // Settings - Saturation
+    saturation: document.getElementById('saturation'),
+    saturationValue: document.getElementById('saturation-value'),
+    saturationPresets: document.querySelectorAll('.saturation-preset'),
+    
     // Settings - Watermarks
     watermarkList: document.getElementById('watermark-list'),
     btnAddWatermark: document.getElementById('btn-add-watermark'),
@@ -66,6 +72,7 @@ const elements = {
     summaryOutput: document.getElementById('summary-output'),
     summaryCount: document.getElementById('summary-count'),
     summaryBorder: document.getElementById('summary-border'),
+    summarySaturation: document.getElementById('summary-saturation'),
     summaryWatermark: document.getElementById('summary-watermark'),
     validationErrors: document.getElementById('validation-errors'),
     errorList: document.getElementById('error-list'),
@@ -159,6 +166,17 @@ function syncUIToState() {
     state.config.output_folder = elements.outputFolder.value;
     state.config.border_thickness = parseInt(elements.borderThicknessValue.value) || 0;
     state.config.border_color = elements.borderColor.value;
+    
+    // Debug: Check saturation element
+    console.log('[DEBUG] syncUIToState - saturation element:', elements.saturationValue);
+    console.log('[DEBUG] syncUIToState - saturation element value:', elements.saturationValue ? elements.saturationValue.value : 'ELEMENT NOT FOUND');
+    
+    // Note: Don't use || 100 because 0 is a valid saturation value (grayscale)
+    const satVal = parseInt(elements.saturationValue.value);
+    state.config.saturation = isNaN(satVal) ? 100 : satVal;
+    
+    console.log('[DEBUG] syncUIToState - parsed saturation:', state.config.saturation);
+    
     state.config.filename_prefix = elements.filenamePrefix.value;
     state.config.filename_suffix = elements.filenameSuffix.value;
     state.config.overwrite_existing = elements.overwriteExisting.checked;
@@ -173,12 +191,17 @@ function syncStateToUI() {
     elements.borderThicknessValue.value = state.config.border_thickness;
     elements.borderColor.value = state.config.border_color;
     elements.borderColorHex.value = state.config.border_color;
+    elements.saturation.value = state.config.saturation;
+    elements.saturationValue.value = state.config.saturation;
     elements.filenamePrefix.value = state.config.filename_prefix;
     elements.filenameSuffix.value = state.config.filename_suffix;
     elements.overwriteExisting.checked = state.config.overwrite_existing;
     
     // Render watermarks
     renderWatermarkList();
+    
+    // Update saturation preset highlights
+    updateSaturationPresets();
     
     updateFilenameExample();
     updateImageCount();
@@ -265,6 +288,40 @@ function setColorPreset(color) {
     elements.borderColor.value = color;
     elements.borderColorHex.value = color.toUpperCase();
     state.config.border_color = color;
+}
+
+// ==================== Saturation Settings ====================
+function updateSaturation() {
+    const value = elements.saturation.value;
+    elements.saturationValue.value = value;
+    state.config.saturation = parseInt(value);
+    updateSaturationPresets();
+}
+
+function updateSaturationFromInput() {
+    let value = parseInt(elements.saturationValue.value);
+    // Use 100 as default only if input is invalid (NaN), not if it's 0
+    if (isNaN(value)) value = 100;
+    value = Math.max(0, Math.min(200, value));
+    elements.saturationValue.value = value;
+    elements.saturation.value = value;
+    state.config.saturation = value;
+    updateSaturationPresets();
+}
+
+function setSaturationPreset(value) {
+    elements.saturation.value = value;
+    elements.saturationValue.value = value;
+    state.config.saturation = parseInt(value);
+    updateSaturationPresets();
+}
+
+function updateSaturationPresets() {
+    const currentValue = state.config.saturation;
+    elements.saturationPresets.forEach(preset => {
+        const presetValue = parseInt(preset.dataset.value);
+        preset.classList.toggle('active', presetValue === currentValue);
+    });
 }
 
 // ==================== Watermark Management ====================
@@ -473,6 +530,10 @@ async function generatePreview() {
     
     syncUIToState();
     
+    // Debug logging
+    console.log('[DEBUG] generatePreview - state.config:', JSON.stringify(state.config, null, 2));
+    console.log('[DEBUG] saturation value being sent:', state.config.saturation);
+    
     // Show loading
     elements.previewPlaceholder.classList.add('hidden');
     elements.previewImage.classList.add('hidden');
@@ -513,6 +574,21 @@ function updateProcessSummary() {
         `;
     } else {
         elements.summaryBorder.textContent = 'None';
+    }
+    
+    // Saturation summary
+    if (state.config.saturation !== 100) {
+        let satLabel = '';
+        if (state.config.saturation === 0) {
+            satLabel = 'Grayscale (0)';
+        } else if (state.config.saturation < 100) {
+            satLabel = `Reduced (${state.config.saturation})`;
+        } else {
+            satLabel = `Enhanced (${state.config.saturation})`;
+        }
+        elements.summarySaturation.textContent = satLabel;
+    } else {
+        elements.summarySaturation.textContent = 'Original (100)';
     }
     
     // Watermark summary
@@ -655,6 +731,13 @@ function processAgain() {
 async function init() {
     console.log('Initializing RKC Photography...');
     
+    // Debug: Check if saturation elements exist
+    console.log('[DEBUG] Checking saturation elements:');
+    console.log('  - saturation slider:', document.getElementById('saturation'));
+    console.log('  - saturation value:', document.getElementById('saturation-value'));
+    console.log('  - elements.saturation:', elements.saturation);
+    console.log('  - elements.saturationValue:', elements.saturationValue);
+    
     // Wait for PyWebView API
     await waitForApi();
     console.log('PyWebView API ready');
@@ -662,7 +745,9 @@ async function init() {
     // Load saved configuration
     try {
         const savedConfig = await api('load_config');
+        console.log('[DEBUG] Loaded config from Python:', JSON.stringify(savedConfig, null, 2));
         Object.assign(state.config, savedConfig);
+        console.log('[DEBUG] State config after merge:', JSON.stringify(state.config, null, 2));
         syncStateToUI();
     } catch (error) {
         console.log('No saved config found, using defaults');
@@ -696,6 +781,13 @@ function setupEventListeners() {
     elements.borderColorHex.addEventListener('change', () => updateBorderColor(false));
     elements.colorPresets.forEach(preset => {
         preset.addEventListener('click', () => setColorPreset(preset.dataset.color));
+    });
+    
+    // Saturation settings
+    elements.saturation.addEventListener('input', updateSaturation);
+    elements.saturationValue.addEventListener('change', updateSaturationFromInput);
+    elements.saturationPresets.forEach(preset => {
+        preset.addEventListener('click', () => setSaturationPreset(preset.dataset.value));
     });
     
     // Watermark settings

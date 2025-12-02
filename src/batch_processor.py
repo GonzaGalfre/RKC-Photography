@@ -86,6 +86,7 @@ class ProcessingConfig:
         output_folder: Destination folder for processed images
         border_thickness: Border thickness in pixels (0 = no border)
         border_color: Border color as hex string
+        saturation: Saturation level (0-200, 100 = original)
         watermarks: List of watermark configurations
         filename_prefix: Prefix to add to output filenames
         filename_suffix: Suffix to add to output filenames (before extension)
@@ -95,6 +96,7 @@ class ProcessingConfig:
     output_folder: str = ""
     border_thickness: int = 0
     border_color: str = "#FFFFFF"
+    saturation: int = 100  # 100 = original, 0 = grayscale, >100 = more saturated
     watermarks: List[WatermarkConfig] = field(default_factory=list)
     filename_prefix: str = ""
     filename_suffix: str = ""
@@ -117,6 +119,9 @@ class ProcessingConfig:
             
         if self.border_thickness < 0:
             errors.append("Border thickness cannot be negative")
+        
+        if not (0 <= self.saturation <= 200):
+            errors.append("Saturation must be between 0 and 200")
         
         # Validate each watermark
         for i, wm in enumerate(self.watermarks):
@@ -335,6 +340,7 @@ class BatchProcessor:
                     output_path=output_path,
                     border_thickness=config.border_thickness if config.border_thickness > 0 else None,
                     border_color=config.border_color,
+                    saturation=config.saturation if config.saturation != 100 else None,
                     watermarks=watermarks_data if watermarks_data else None
                 )
                 
@@ -436,6 +442,7 @@ def process_folder(
     output_folder: str,
     border_thickness: int = 0,
     border_color: str = "#FFFFFF",
+    saturation: int = 100,
     watermarks: Optional[List[WatermarkConfig]] = None,
     progress_callback: Optional[Callable[[ProcessingProgress], None]] = None
 ) -> ProcessingProgress:
@@ -449,6 +456,7 @@ def process_folder(
         output_folder: Destination folder for processed images
         border_thickness: Border thickness in pixels
         border_color: Border color as hex
+        saturation: Saturation level (0-200, 100 = original)
         watermarks: List of WatermarkConfig objects
         progress_callback: Optional callback for progress updates
         
@@ -460,6 +468,7 @@ def process_folder(
         output_folder=output_folder,
         border_thickness=border_thickness,
         border_color=border_color,
+        saturation=saturation,
         watermarks=watermarks or []
     )
     

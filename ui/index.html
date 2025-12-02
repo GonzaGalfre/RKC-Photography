@@ -165,6 +165,50 @@
                         </button>
                     </div>
                     
+                    <!-- Saturation Section -->
+                    <div class="settings-card">
+                        <h2 class="card-title">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="10"/>
+                                <circle cx="12" cy="12" r="6"/>
+                                <circle cx="12" cy="12" r="2"/>
+                            </svg>
+                            Saturation
+                        </h2>
+                        
+                        <div class="form-group">
+                            <label for="saturation">Adjustment</label>
+                            <div class="range-input">
+                                <input type="range" id="saturation" min="0" max="200" value="100">
+                                <input type="number" id="saturation-value" min="0" max="200" value="100">
+                            </div>
+                            <span class="input-hint saturation-hint">100 = Original | &lt;100 = Less saturated | &gt;100 = More saturated</span>
+                        </div>
+                        
+                        <div class="saturation-presets">
+                            <button class="saturation-preset" data-value="0" title="Grayscale">
+                                <span class="preset-preview grayscale"></span>
+                                <span class="preset-label">Grayscale</span>
+                            </button>
+                            <button class="saturation-preset" data-value="50" title="Muted">
+                                <span class="preset-preview muted"></span>
+                                <span class="preset-label">Muted</span>
+                            </button>
+                            <button class="saturation-preset" data-value="100" title="Original">
+                                <span class="preset-preview original"></span>
+                                <span class="preset-label">Original</span>
+                            </button>
+                            <button class="saturation-preset" data-value="130" title="Vibrant">
+                                <span class="preset-preview vibrant"></span>
+                                <span class="preset-label">Vibrant</span>
+                            </button>
+                            <button class="saturation-preset" data-value="170" title="Vivid">
+                                <span class="preset-preview vivid"></span>
+                                <span class="preset-label">Vivid</span>
+                            </button>
+                        </div>
+                    </div>
+                    
                     <!-- Filename Options -->
                     <div class="settings-card">
                         <h2 class="card-title">
@@ -265,6 +309,10 @@
                         <div class="summary-row">
                             <span class="summary-label">Border:</span>
                             <span class="summary-value" id="summary-border">None</span>
+                        </div>
+                        <div class="summary-row">
+                            <span class="summary-label">Saturation:</span>
+                            <span class="summary-value" id="summary-saturation">Original (100)</span>
                         </div>
                         <div class="summary-row">
                             <span class="summary-label">Watermark:</span>
