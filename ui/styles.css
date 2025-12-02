@@ -224,6 +224,34 @@ body {
     font-size: 15px;
 }
 
+/* ==================== Settings Sections ==================== */
+.settings-section {
+    margin-bottom: var(--space-2xl);
+}
+
+.settings-section:last-child {
+    margin-bottom: 0;
+}
+
+.section-title {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    font-family: var(--font-display);
+    font-size: 32px;
+    font-weight: 600;
+    color: var(--accent-primary);
+    margin-bottom: var(--space-xl);
+    padding-bottom: var(--space-lg);
+    border-bottom: 2px solid var(--accent-primary);
+    letter-spacing: 0.02em;
+}
+
+.section-title svg {
+    width: 32px;
+    height: 32px;
+}
+
 /* ==================== Settings Grid ==================== */
 .settings-grid {
     display: grid;
@@ -248,18 +276,19 @@ body {
 .card-title {
     display: flex;
     align-items: center;
-    gap: var(--space-md);
+    gap: var(--space-sm);
     font-family: var(--font-display);
-    font-size: 26px;
+    font-size: 20px;
     font-weight: 500;
     color: var(--text-primary);
-    margin-bottom: var(--space-xl);
+    margin-bottom: var(--space-lg);
 }
 
 .card-title svg {
-    width: 28px;
-    height: 28px;
+    width: 22px;
+    height: 22px;
     color: var(--accent-primary);
+    opacity: 0.7;
 }
 
 /* ==================== Form Elements ==================== */

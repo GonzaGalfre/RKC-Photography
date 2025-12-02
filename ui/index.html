@@ -64,175 +64,211 @@
                     <p>Configure your image processing options</p>
                 </header>
                 
-                <div class="settings-grid">
-                    <!-- Folders Section -->
-                    <div class="settings-card">
-                        <h2 class="card-title">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/>
-                            </svg>
-                            Folders
-                        </h2>
+                <!-- ==================== FILE SECTION ==================== -->
+                <div class="settings-section">
+                    <h2 class="section-title">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/>
+                        </svg>
+                        File
+                    </h2>
+                    
+                    <div class="settings-grid">
+                        <!-- Folders Card -->
+                        <div class="settings-card">
+                            <h3 class="card-title">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/>
+                                </svg>
+                                Folders
+                            </h3>
+                            
+                            <div class="form-group">
+                                <label for="input-folder">Input Folder</label>
+                                <div class="input-with-button">
+                                    <input type="text" id="input-folder" placeholder="Select folder with images..." readonly>
+                                    <button class="btn-icon" id="btn-select-input" title="Browse">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/>
+                                        </svg>
+                                    </button>
+                                </div>
+                                <span class="input-hint" id="input-count"></span>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="output-folder">Output Folder</label>
+                                <div class="input-with-button">
+                                    <input type="text" id="output-folder" placeholder="Select output folder..." readonly>
+                                    <button class="btn-icon" id="btn-select-output" title="Browse">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/>
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="overwrite-existing">
+                                    <span class="checkbox-text">Overwrite existing files</span>
+                                </label>
+                            </div>
+                        </div>
                         
-                        <div class="form-group">
-                            <label for="input-folder">Input Folder</label>
-                            <div class="input-with-button">
-                                <input type="text" id="input-folder" placeholder="Select folder with images..." readonly>
-                                <button class="btn-icon" id="btn-select-input" title="Browse">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/>
-                                    </svg>
+                        <!-- Filename Options Card -->
+                        <div class="settings-card">
+                            <h3 class="card-title">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+                                    <polyline points="14 2 14 8 20 8"/>
+                                </svg>
+                                Filename Options
+                            </h3>
+                            
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="filename-prefix">Prefix</label>
+                                    <input type="text" id="filename-prefix" placeholder="e.g., processed_">
+                                </div>
+                                <div class="form-group">
+                                    <label for="filename-suffix">Suffix</label>
+                                    <input type="text" id="filename-suffix" placeholder="e.g., _edited">
+                                </div>
+                            </div>
+                            
+                            <div class="filename-preview">
+                                <span class="label">Preview:</span>
+                                <code id="filename-example">photo.jpg</code>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- ==================== IMAGE SECTION ==================== -->
+                <div class="settings-section">
+                    <h2 class="section-title">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="3" y="3" width="18" height="18" rx="2"/>
+                            <circle cx="8.5" cy="8.5" r="1.5"/>
+                            <path d="M21 15l-5-5L5 21"/>
+                        </svg>
+                        Image
+                    </h2>
+                    
+                    <div class="settings-grid">
+                        <!-- Saturation Card -->
+                        <div class="settings-card">
+                            <h3 class="card-title">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="12" r="10"/>
+                                    <circle cx="12" cy="12" r="6"/>
+                                    <circle cx="12" cy="12" r="2"/>
+                                </svg>
+                                Saturation
+                            </h3>
+                            
+                            <div class="form-group">
+                                <label for="saturation">Adjustment</label>
+                                <div class="range-input">
+                                    <input type="range" id="saturation" min="0" max="200" value="100">
+                                    <input type="number" id="saturation-value" min="0" max="200" value="100">
+                                </div>
+                                <span class="input-hint saturation-hint">100 = Original | &lt;100 = Less saturated | &gt;100 = More saturated</span>
+                            </div>
+                            
+                            <div class="saturation-presets">
+                                <button class="saturation-preset" data-value="0" title="Grayscale">
+                                    <span class="preset-preview grayscale"></span>
+                                    <span class="preset-label">Grayscale</span>
+                                </button>
+                                <button class="saturation-preset" data-value="50" title="Muted">
+                                    <span class="preset-preview muted"></span>
+                                    <span class="preset-label">Muted</span>
+                                </button>
+                                <button class="saturation-preset" data-value="100" title="Original">
+                                    <span class="preset-preview original"></span>
+                                    <span class="preset-label">Original</span>
+                                </button>
+                                <button class="saturation-preset" data-value="130" title="Vibrant">
+                                    <span class="preset-preview vibrant"></span>
+                                    <span class="preset-label">Vibrant</span>
+                                </button>
+                                <button class="saturation-preset" data-value="170" title="Vivid">
+                                    <span class="preset-preview vivid"></span>
+                                    <span class="preset-label">Vivid</span>
                                 </button>
                             </div>
-                            <span class="input-hint" id="input-count"></span>
                         </div>
                         
-                        <div class="form-group">
-                            <label for="output-folder">Output Folder</label>
-                            <div class="input-with-button">
-                                <input type="text" id="output-folder" placeholder="Select output folder..." readonly>
-                                <button class="btn-icon" id="btn-select-output" title="Browse">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/>
-                                    </svg>
-                                </button>
-                            </div>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label class="checkbox-label">
-                                <input type="checkbox" id="overwrite-existing">
-                                <span class="checkbox-text">Overwrite existing files</span>
-                            </label>
-                        </div>
-                    </div>
-                    
-                    <!-- Border Section -->
-                    <div class="settings-card">
-                        <h2 class="card-title">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <rect x="3" y="3" width="18" height="18" rx="2"/>
-                            </svg>
-                            Border
-                        </h2>
-                        
-                        <div class="form-group">
-                            <label for="border-thickness">Thickness (pixels)</label>
-                            <div class="range-input">
-                                <input type="range" id="border-thickness" min="0" max="100" value="0">
-                                <input type="number" id="border-thickness-value" min="0" max="500" value="0">
-                            </div>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label for="border-color">Color</label>
-                            <div class="color-input">
-                                <input type="color" id="border-color" value="#FFFFFF">
-                                <input type="text" id="border-color-hex" value="#FFFFFF" placeholder="#FFFFFF">
-                            </div>
-                            <div class="color-presets">
-                                <button class="color-preset" data-color="#FFFFFF" style="background:#FFFFFF" title="White"></button>
-                                <button class="color-preset" data-color="#000000" style="background:#000000" title="Black"></button>
-                                <button class="color-preset" data-color="#1a1a1a" style="background:#1a1a1a" title="Dark Gray"></button>
-                                <button class="color-preset" data-color="#F5F5DC" style="background:#F5F5DC" title="Beige"></button>
-                                <button class="color-preset" data-color="#2C3E50" style="background:#2C3E50" title="Navy"></button>
-                                <button class="color-preset" data-color="#8B4513" style="background:#8B4513" title="Brown"></button>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Watermarks Section -->
-                    <div class="settings-card settings-card-wide">
-                        <h2 class="card-title">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
-                            </svg>
-                            Watermarks
-                        </h2>
-                        
-                        <!-- Watermark List -->
-                        <div class="watermark-list" id="watermark-list">
-                            <!-- Watermark items will be added here dynamically -->
-                        </div>
-                        
-                        <!-- Add Watermark Button -->
-                        <button class="btn btn-secondary btn-add-watermark" id="btn-add-watermark">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <line x1="12" y1="5" x2="12" y2="19"/>
-                                <line x1="5" y1="12" x2="19" y2="12"/>
-                            </svg>
-                            Add Watermark
-                        </button>
-                    </div>
-                    
-                    <!-- Saturation Section -->
-                    <div class="settings-card">
-                        <h2 class="card-title">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <circle cx="12" cy="12" r="10"/>
-                                <circle cx="12" cy="12" r="6"/>
-                                <circle cx="12" cy="12" r="2"/>
-                            </svg>
-                            Saturation
-                        </h2>
-                        
-                        <div class="form-group">
-                            <label for="saturation">Adjustment</label>
-                            <div class="range-input">
-                                <input type="range" id="saturation" min="0" max="200" value="100">
-                                <input type="number" id="saturation-value" min="0" max="200" value="100">
-                            </div>
-                            <span class="input-hint saturation-hint">100 = Original | &lt;100 = Less saturated | &gt;100 = More saturated</span>
-                        </div>
-                        
-                        <div class="saturation-presets">
-                            <button class="saturation-preset" data-value="0" title="Grayscale">
-                                <span class="preset-preview grayscale"></span>
-                                <span class="preset-label">Grayscale</span>
-                            </button>
-                            <button class="saturation-preset" data-value="50" title="Muted">
-                                <span class="preset-preview muted"></span>
-                                <span class="preset-label">Muted</span>
-                            </button>
-                            <button class="saturation-preset" data-value="100" title="Original">
-                                <span class="preset-preview original"></span>
-                                <span class="preset-label">Original</span>
-                            </button>
-                            <button class="saturation-preset" data-value="130" title="Vibrant">
-                                <span class="preset-preview vibrant"></span>
-                                <span class="preset-label">Vibrant</span>
-                            </button>
-                            <button class="saturation-preset" data-value="170" title="Vivid">
-                                <span class="preset-preview vivid"></span>
-                                <span class="preset-label">Vivid</span>
-                            </button>
-                        </div>
-                    </div>
-                    
-                    <!-- Filename Options -->
-                    <div class="settings-card">
-                        <h2 class="card-title">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
-                                <polyline points="14 2 14 8 20 8"/>
-                            </svg>
-                            Filename Options
-                        </h2>
-                        
-                        <div class="form-row">
+                        <!-- Border Card -->
+                        <div class="settings-card">
+                            <h3 class="card-title">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="3" y="3" width="18" height="18" rx="2"/>
+                                </svg>
+                                Border
+                            </h3>
+                            
                             <div class="form-group">
-                                <label for="filename-prefix">Prefix</label>
-                                <input type="text" id="filename-prefix" placeholder="e.g., processed_">
+                                <label for="border-thickness">Thickness (pixels)</label>
+                                <div class="range-input">
+                                    <input type="range" id="border-thickness" min="0" max="100" value="0">
+                                    <input type="number" id="border-thickness-value" min="0" max="500" value="0">
+                                </div>
                             </div>
+                            
                             <div class="form-group">
-                                <label for="filename-suffix">Suffix</label>
-                                <input type="text" id="filename-suffix" placeholder="e.g., _edited">
+                                <label for="border-color">Color</label>
+                                <div class="color-input">
+                                    <input type="color" id="border-color" value="#FFFFFF">
+                                    <input type="text" id="border-color-hex" value="#FFFFFF" placeholder="#FFFFFF">
+                                </div>
+                                <div class="color-presets">
+                                    <button class="color-preset" data-color="#FFFFFF" style="background:#FFFFFF" title="White"></button>
+                                    <button class="color-preset" data-color="#000000" style="background:#000000" title="Black"></button>
+                                    <button class="color-preset" data-color="#1a1a1a" style="background:#1a1a1a" title="Dark Gray"></button>
+                                    <button class="color-preset" data-color="#F5F5DC" style="background:#F5F5DC" title="Beige"></button>
+                                    <button class="color-preset" data-color="#2C3E50" style="background:#2C3E50" title="Navy"></button>
+                                    <button class="color-preset" data-color="#8B4513" style="background:#8B4513" title="Brown"></button>
+                                </div>
                             </div>
                         </div>
-                        
-                        <div class="filename-preview">
-                            <span class="label">Preview:</span>
-                            <code id="filename-example">photo.jpg</code>
+                    </div>
+                </div>
+                
+                <!-- ==================== WATERMARKS SECTION ==================== -->
+                <div class="settings-section">
+                    <h2 class="section-title">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+                        </svg>
+                        Watermarks
+                    </h2>
+                    
+                    <div class="settings-grid">
+                        <!-- Watermarks Card -->
+                        <div class="settings-card settings-card-wide">
+                            <h3 class="card-title">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+                                </svg>
+                                Add Watermarks
+                            </h3>
+                            
+                            <!-- Watermark List -->
+                            <div class="watermark-list" id="watermark-list">
+                                <!-- Watermark items will be added here dynamically -->
+                            </div>
+                            
+                            <!-- Add Watermark Button -->
+                            <button class="btn btn-secondary btn-add-watermark" id="btn-add-watermark">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <line x1="12" y1="5" x2="12" y2="19"/>
+                                    <line x1="5" y1="12" x2="19" y2="12"/>
+                                </svg>
+                                Add Watermark
+                            </button>
                         </div>
                     </div>
                 </div>

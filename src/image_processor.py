@@ -318,14 +318,8 @@ def generate_preview(
             return None, f"Unsupported format: {os.path.splitext(input_path)[1]}"
         
         with Image(filename=input_path) as img:
-            # Debug logging
-            print(f"[DEBUG] generate_preview image_processor:")
-            print(f"  - saturation param: {saturation}")
-            print(f"  - will apply saturation: {saturation is not None and saturation != 100}")
-            
             # Apply saturation adjustment first
             if saturation is not None and saturation != 100:
-                print(f"  - APPLYING saturation: {saturation}")
                 adjust_saturation(img, saturation)
             
             # Apply border

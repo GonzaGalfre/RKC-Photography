@@ -167,15 +167,9 @@ function syncUIToState() {
     state.config.border_thickness = parseInt(elements.borderThicknessValue.value) || 0;
     state.config.border_color = elements.borderColor.value;
     
-    // Debug: Check saturation element
-    console.log('[DEBUG] syncUIToState - saturation element:', elements.saturationValue);
-    console.log('[DEBUG] syncUIToState - saturation element value:', elements.saturationValue ? elements.saturationValue.value : 'ELEMENT NOT FOUND');
-    
     // Note: Don't use || 100 because 0 is a valid saturation value (grayscale)
     const satVal = parseInt(elements.saturationValue.value);
     state.config.saturation = isNaN(satVal) ? 100 : satVal;
-    
-    console.log('[DEBUG] syncUIToState - parsed saturation:', state.config.saturation);
     
     state.config.filename_prefix = elements.filenamePrefix.value;
     state.config.filename_suffix = elements.filenameSuffix.value;
@@ -530,10 +524,6 @@ async function generatePreview() {
     
     syncUIToState();
     
-    // Debug logging
-    console.log('[DEBUG] generatePreview - state.config:', JSON.stringify(state.config, null, 2));
-    console.log('[DEBUG] saturation value being sent:', state.config.saturation);
-    
     // Show loading
     elements.previewPlaceholder.classList.add('hidden');
     elements.previewImage.classList.add('hidden');
@@ -731,13 +721,6 @@ function processAgain() {
 async function init() {
     console.log('Initializing RKC Photography...');
     
-    // Debug: Check if saturation elements exist
-    console.log('[DEBUG] Checking saturation elements:');
-    console.log('  - saturation slider:', document.getElementById('saturation'));
-    console.log('  - saturation value:', document.getElementById('saturation-value'));
-    console.log('  - elements.saturation:', elements.saturation);
-    console.log('  - elements.saturationValue:', elements.saturationValue);
-    
     // Wait for PyWebView API
     await waitForApi();
     console.log('PyWebView API ready');
@@ -745,9 +728,7 @@ async function init() {
     // Load saved configuration
     try {
         const savedConfig = await api('load_config');
-        console.log('[DEBUG] Loaded config from Python:', JSON.stringify(savedConfig, null, 2));
         Object.assign(state.config, savedConfig);
-        console.log('[DEBUG] State config after merge:', JSON.stringify(state.config, null, 2));
         syncStateToUI();
     } catch (error) {
         console.log('No saved config found, using defaults');

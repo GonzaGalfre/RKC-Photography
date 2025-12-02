@@ -304,12 +304,6 @@ class Api:
             saturation = int(config_dict.get('saturation', 100))
             border_thickness = int(config_dict.get('border_thickness', 0)) or None
             
-            # Debug logging
-            print(f"[DEBUG] generate_preview called:")
-            print(f"  - saturation from config: {config_dict.get('saturation')} -> parsed: {saturation}")
-            print(f"  - border_thickness: {border_thickness}")
-            print(f"  - passing saturation to processor: {saturation if saturation != 100 else None}")
-            
             image_bytes, error = generate_image_preview(
                 input_path=image_path,
                 border_thickness=border_thickness,
