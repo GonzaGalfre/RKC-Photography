@@ -258,7 +258,9 @@ class Api:
                 watermarks=watermarks,
                 filename_prefix=config_dict.get('filename_prefix', ''),
                 filename_suffix=config_dict.get('filename_suffix', ''),
-                overwrite_existing=bool(config_dict.get('overwrite_existing', False))
+                overwrite_existing=bool(config_dict.get('overwrite_existing', False)),
+                parallel_processing=bool(config_dict.get('parallel_processing', True)),
+                max_workers=int(config_dict.get('max_workers', 0))
             )
             errors = config.validate()
             return {
@@ -391,7 +393,9 @@ class Api:
                 watermarks=watermarks,
                 filename_prefix=config_dict.get('filename_prefix', ''),
                 filename_suffix=config_dict.get('filename_suffix', ''),
-                overwrite_existing=bool(config_dict.get('overwrite_existing', False))
+                overwrite_existing=bool(config_dict.get('overwrite_existing', False)),
+                parallel_processing=bool(config_dict.get('parallel_processing', True)),
+                max_workers=int(config_dict.get('max_workers', 0))
             )
             
             self._current_config = config
@@ -468,9 +472,23 @@ class Api:
     def get_app_info(self) -> Dict[str, Any]:
         """Get application information."""
         from . import __version__
+        import multiprocessing
+        cpu_count = multiprocessing.cpu_count()
+        
+        # Calculate recommended workers (same logic as _get_default_workers)
+        if cpu_count <= 2:
+            recommended = 1
+        elif cpu_count <= 4:
+            recommended = cpu_count - 1
+        else:
+            recommended = min(cpu_count - 2, 12)
+        
         return {
             'name': 'RKC Photography',
             'version': __version__,
-            'supported_formats': sorted(list(SUPPORTED_FORMATS))
+            'supported_formats': sorted(list(SUPPORTED_FORMATS)),
+            'cpu_count': cpu_count,
+            'recommended_workers': recommended,
+            'max_workers_limit': 12  # UI can use this to set slider max
         }
 

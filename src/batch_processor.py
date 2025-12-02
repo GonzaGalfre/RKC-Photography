@@ -4,14 +4,15 @@ Batch Processing Module
 Handles batch processing of multiple images from a folder.
 Provides progress reporting, error collection, and cancellation support.
 
-Design Decision: Process images one-by-one (not in parallel) to:
-- Keep memory usage low for large batches
-- Simplify error handling and progress reporting
-- Avoid overwhelming disk I/O
+Supports both sequential and parallel processing:
+- Sequential: Lower memory usage, simpler error handling
+- Parallel: Faster processing using multiple CPU cores via ProcessPoolExecutor
 """
 
 import os
 import threading
+import multiprocessing
+from concurrent.futures import ProcessPoolExecutor, as_completed, Future, TimeoutError as FuturesTimeoutError
 from typing import Optional, Callable, List, Dict, Any, Literal
 from dataclasses import dataclass, field
 from enum import Enum
@@ -22,6 +23,52 @@ from .image_processor import (
     SUPPORTED_FORMATS,
     WATERMARK_POSITIONS
 )
+
+
+def _get_default_workers() -> int:
+    """
+    Get default number of workers based on CPU count.
+    
+    Optimized for large batches (300-400+ images):
+    - Uses most available CPUs for maximum throughput
+    - Leaves 1-2 cores for system/UI responsiveness
+    - Capped at 12 workers (diminishing returns beyond this due to I/O and memory)
+    """
+    cpu_count = multiprocessing.cpu_count()
+    if cpu_count <= 2:
+        return 1
+    elif cpu_count <= 4:
+        return cpu_count - 1  # Leave 1 core for system
+    else:
+        # Use most cores but leave 2 for system/UI
+        return min(cpu_count - 2, 12)
+
+
+def _process_image_worker(
+    input_path: str,
+    output_path: str,
+    border_thickness: Optional[int],
+    border_color: str,
+    saturation: Optional[int],
+    watermarks: Optional[List[dict]]
+) -> dict:
+    """
+    Worker function for parallel image processing.
+    
+    This function runs in a separate process, so it must be defined at module level
+    and all arguments must be picklable (no complex objects).
+    
+    Returns:
+        dict with processing result (same format as process_single_image)
+    """
+    return process_single_image(
+        input_path=input_path,
+        output_path=output_path,
+        border_thickness=border_thickness,
+        border_color=border_color,
+        saturation=saturation,
+        watermarks=watermarks
+    )
 
 
 @dataclass
@@ -91,6 +138,8 @@ class ProcessingConfig:
         filename_prefix: Prefix to add to output filenames
         filename_suffix: Suffix to add to output filenames (before extension)
         overwrite_existing: If True, overwrite files in output folder
+        parallel_processing: If True, process images in parallel using multiple CPU cores
+        max_workers: Number of parallel workers (0 = auto-detect based on CPU count)
     """
     input_folder: str = ""
     output_folder: str = ""
@@ -101,6 +150,8 @@ class ProcessingConfig:
     filename_prefix: str = ""
     filename_suffix: str = ""
     overwrite_existing: bool = False
+    parallel_processing: bool = True  # Enable parallel processing by default
+    max_workers: int = 0  # 0 = auto-detect
     
     def validate(self) -> List[str]:
         """
@@ -123,6 +174,9 @@ class ProcessingConfig:
         if not (0 <= self.saturation <= 200):
             errors.append("Saturation must be between 0 and 200")
         
+        if self.max_workers < 0:
+            errors.append("Max workers cannot be negative")
+        
         # Validate each watermark
         for i, wm in enumerate(self.watermarks):
             wm_errors = wm.validate()
@@ -130,6 +184,14 @@ class ProcessingConfig:
                 errors.append(f"Watermark {i+1}: {err}")
             
         return errors
+    
+    def get_effective_workers(self) -> int:
+        """Get the effective number of workers to use."""
+        if not self.parallel_processing:
+            return 1
+        if self.max_workers <= 0:
+            return _get_default_workers()
+        return self.max_workers
 
 
 @dataclass
@@ -270,7 +332,7 @@ class BatchProcessor:
         """
         Main processing loop (runs in separate thread).
         
-        Processes images one-by-one, updating progress and checking for cancellation.
+        Supports both sequential and parallel processing based on config.
         """
         config = self._config
         if not config:
@@ -294,74 +356,30 @@ class BatchProcessor:
                 self._notify_progress()
                 return
             
-            # Process each image
-            for input_path in image_files:
-                # Check for cancellation
-                if self._cancel_requested.is_set():
-                    with self._lock:
-                        self._progress.state = ProcessingState.CANCELLED
-                    self._notify_progress()
-                    return
-                
-                filename = os.path.basename(input_path)
-                with self._lock:
-                    self._progress.current_file = filename
-                self._notify_progress()
-                
-                # Generate output path
-                output_path = self._generate_output_path(input_path, config)
-                
-                # Check if output exists and overwrite is disabled
-                if os.path.exists(output_path) and not config.overwrite_existing:
-                    with self._lock:
-                        self._progress.skipped_count += 1
-                        self._progress.processed_count += 1
-                        self._progress.errors.append({
-                            "file": filename,
-                            "error": "Output file already exists (overwrite disabled)"
-                        })
-                    continue
-                
-                # Build watermarks list for processing
-                watermarks_data = []
-                for wm in config.watermarks:
-                    if wm.path:
-                        watermarks_data.append({
-                            'path': wm.path,
-                            'position': wm.position,
-                            'opacity': wm.opacity,
-                            'scale': wm.scale,
-                            'margin': wm.margin
-                        })
-                
-                # Process the image
-                result = process_single_image(
-                    input_path=input_path,
-                    output_path=output_path,
-                    border_thickness=config.border_thickness if config.border_thickness > 0 else None,
-                    border_color=config.border_color,
-                    saturation=config.saturation if config.saturation != 100 else None,
-                    watermarks=watermarks_data if watermarks_data else None
-                )
-                
-                with self._lock:
-                    self._progress.processed_count += 1
-                    if result["success"]:
-                        self._progress.success_count += 1
-                    else:
-                        self._progress.error_count += 1
-                        self._progress.errors.append({
-                            "file": filename,
-                            "error": result["error"]
-                        })
-                
-                self._notify_progress()
+            # Prepare watermarks data (must be picklable for multiprocessing)
+            watermarks_data = []
+            for wm in config.watermarks:
+                if wm.path:
+                    watermarks_data.append({
+                        'path': wm.path,
+                        'position': wm.position,
+                        'opacity': wm.opacity,
+                        'scale': wm.scale,
+                        'margin': wm.margin
+                    })
+            watermarks_data = watermarks_data if watermarks_data else None
             
-            # Mark as completed
-            with self._lock:
-                self._progress.current_file = ""
-                self._progress.state = ProcessingState.COMPLETED
-            self._notify_progress()
+            # Get effective number of workers
+            num_workers = config.get_effective_workers()
+            
+            if num_workers > 1:
+                # Parallel processing
+                self._process_parallel(
+                    image_files, config, watermarks_data, num_workers
+                )
+            else:
+                # Sequential processing (original behavior)
+                self._process_sequential(image_files, config, watermarks_data)
             
         except Exception as e:
             with self._lock:
@@ -378,6 +396,227 @@ class BatchProcessor:
                     self._completion_callback(self.progress)
                 except Exception:
                     pass
+    
+    def _process_sequential(
+        self,
+        image_files: List[str],
+        config: ProcessingConfig,
+        watermarks_data: Optional[List[dict]]
+    ) -> None:
+        """Process images one-by-one (sequential mode)."""
+        for input_path in image_files:
+            # Check for cancellation
+            if self._cancel_requested.is_set():
+                with self._lock:
+                    self._progress.state = ProcessingState.CANCELLED
+                self._notify_progress()
+                return
+            
+            filename = os.path.basename(input_path)
+            with self._lock:
+                self._progress.current_file = filename
+            self._notify_progress()
+            
+            # Generate output path
+            output_path = self._generate_output_path(input_path, config)
+            
+            # Check if output exists and overwrite is disabled
+            if os.path.exists(output_path) and not config.overwrite_existing:
+                with self._lock:
+                    self._progress.skipped_count += 1
+                    self._progress.processed_count += 1
+                    self._progress.errors.append({
+                        "file": filename,
+                        "error": "Output file already exists (overwrite disabled)"
+                    })
+                continue
+            
+            # Process the image
+            result = process_single_image(
+                input_path=input_path,
+                output_path=output_path,
+                border_thickness=config.border_thickness if config.border_thickness > 0 else None,
+                border_color=config.border_color,
+                saturation=config.saturation if config.saturation != 100 else None,
+                watermarks=watermarks_data
+            )
+            
+            with self._lock:
+                self._progress.processed_count += 1
+                if result["success"]:
+                    self._progress.success_count += 1
+                else:
+                    self._progress.error_count += 1
+                    self._progress.errors.append({
+                        "file": filename,
+                        "error": result["error"]
+                    })
+            
+            self._notify_progress()
+        
+        # Mark as completed
+        with self._lock:
+            self._progress.current_file = ""
+            self._progress.state = ProcessingState.COMPLETED
+        self._notify_progress()
+    
+    def _process_parallel(
+        self,
+        image_files: List[str],
+        config: ProcessingConfig,
+        watermarks_data: Optional[List[dict]],
+        num_workers: int
+    ) -> None:
+        """
+        Process images in parallel using ProcessPoolExecutor.
+        
+        Optimized for large batches (300-400+ images):
+        - Uses chunked task submission to limit memory usage
+        - Maintains a sliding window of active tasks (2x workers)
+        - Processes results as they complete for smooth progress updates
+        """
+        # Pre-filter files that would be skipped
+        tasks = []
+        for input_path in image_files:
+            output_path = self._generate_output_path(input_path, config)
+            filename = os.path.basename(input_path)
+            
+            # Check if output exists and overwrite is disabled
+            if os.path.exists(output_path) and not config.overwrite_existing:
+                with self._lock:
+                    self._progress.skipped_count += 1
+                    self._progress.processed_count += 1
+                    self._progress.errors.append({
+                        "file": filename,
+                        "error": "Output file already exists (overwrite disabled)"
+                    })
+                self._notify_progress()
+            else:
+                tasks.append((input_path, output_path, filename))
+        
+        if not tasks:
+            with self._lock:
+                self._progress.current_file = ""
+                self._progress.state = ProcessingState.COMPLETED
+            self._notify_progress()
+            return
+        
+        # Update current file to show parallel processing
+        with self._lock:
+            self._progress.current_file = f"Processing {len(tasks)} images with {num_workers} workers..."
+        self._notify_progress()
+        
+        # Process in parallel using ProcessPoolExecutor
+        border_thickness = config.border_thickness if config.border_thickness > 0 else None
+        saturation = config.saturation if config.saturation != 100 else None
+        
+        # For large batches, use chunked submission to limit memory usage
+        # Keep at most 2x workers worth of tasks pending at any time
+        max_pending = num_workers * 2
+        
+        with ProcessPoolExecutor(max_workers=num_workers) as executor:
+            future_to_file: Dict[Future, tuple] = {}
+            task_iter = iter(tasks)
+            tasks_submitted = 0
+            tasks_total = len(tasks)
+            
+            # Initial batch submission
+            for _ in range(min(max_pending, tasks_total)):
+                if self._cancel_requested.is_set():
+                    break
+                try:
+                    input_path, output_path, filename = next(task_iter)
+                    future = executor.submit(
+                        _process_image_worker,
+                        input_path,
+                        output_path,
+                        border_thickness,
+                        config.border_color,
+                        saturation,
+                        watermarks_data
+                    )
+                    future_to_file[future] = (input_path, output_path, filename)
+                    tasks_submitted += 1
+                except StopIteration:
+                    break
+            
+            # Process results and submit new tasks as slots become available
+            while future_to_file:
+                # Check for cancellation before waiting
+                if self._cancel_requested.is_set():
+                    # Cancel remaining futures
+                    for f in future_to_file:
+                        f.cancel()
+                    executor.shutdown(wait=False, cancel_futures=True)
+                    with self._lock:
+                        self._progress.state = ProcessingState.CANCELLED
+                    self._notify_progress()
+                    return
+                
+                # Wait for the next completed future (with short timeout for cancellation responsiveness)
+                try:
+                    # Use a copy of keys to avoid dict modification during iteration
+                    completed_iter = as_completed(list(future_to_file.keys()), timeout=1.0)
+                    future = next(completed_iter)
+                except FuturesTimeoutError:
+                    # Timeout - loop again to check cancellation
+                    continue
+                except StopIteration:
+                    # No more futures
+                    break
+                
+                input_path, output_path, filename = future_to_file.pop(future)
+                
+                try:
+                    result = future.result()
+                    
+                    with self._lock:
+                        self._progress.processed_count += 1
+                        self._progress.current_file = filename
+                        if result["success"]:
+                            self._progress.success_count += 1
+                        else:
+                            self._progress.error_count += 1
+                            self._progress.errors.append({
+                                "file": filename,
+                                "error": result["error"]
+                            })
+                    
+                    self._notify_progress()
+                    
+                except Exception as e:
+                    with self._lock:
+                        self._progress.processed_count += 1
+                        self._progress.error_count += 1
+                        self._progress.errors.append({
+                            "file": filename,
+                            "error": f"Worker error: {type(e).__name__}: {str(e)}"
+                        })
+                    self._notify_progress()
+                
+                # Submit a new task if there are more
+                if tasks_submitted < tasks_total and not self._cancel_requested.is_set():
+                    try:
+                        input_path, output_path, filename = next(task_iter)
+                        new_future = executor.submit(
+                            _process_image_worker,
+                            input_path,
+                            output_path,
+                            border_thickness,
+                            config.border_color,
+                            saturation,
+                            watermarks_data
+                        )
+                        future_to_file[new_future] = (input_path, output_path, filename)
+                        tasks_submitted += 1
+                    except StopIteration:
+                        pass
+        
+        # Mark as completed
+        with self._lock:
+            self._progress.current_file = ""
+            self._progress.state = ProcessingState.COMPLETED
+        self._notify_progress()
     
     def start(self, config: ProcessingConfig) -> Optional[str]:
         """
@@ -444,7 +683,9 @@ def process_folder(
     border_color: str = "#FFFFFF",
     saturation: int = 100,
     watermarks: Optional[List[WatermarkConfig]] = None,
-    progress_callback: Optional[Callable[[ProcessingProgress], None]] = None
+    progress_callback: Optional[Callable[[ProcessingProgress], None]] = None,
+    parallel_processing: bool = True,
+    max_workers: int = 0
 ) -> ProcessingProgress:
     """
     Process all images in a folder (blocking/synchronous).
@@ -459,6 +700,8 @@ def process_folder(
         saturation: Saturation level (0-200, 100 = original)
         watermarks: List of WatermarkConfig objects
         progress_callback: Optional callback for progress updates
+        parallel_processing: If True, process images in parallel (default: True)
+        max_workers: Number of parallel workers (0 = auto-detect based on CPU count)
         
     Returns:
         Final ProcessingProgress with results
@@ -469,7 +712,9 @@ def process_folder(
         border_thickness=border_thickness,
         border_color=border_color,
         saturation=saturation,
-        watermarks=watermarks or []
+        watermarks=watermarks or [],
+        parallel_processing=parallel_processing,
+        max_workers=max_workers
     )
     
     processor = BatchProcessor()

@@ -106,7 +106,9 @@ def load_processing_config() -> ProcessingConfig:
         watermarks=watermarks,
         filename_prefix=processing.get('filename_prefix', ''),
         filename_suffix=processing.get('filename_suffix', ''),
-        overwrite_existing=processing.get('overwrite_existing', False)
+        overwrite_existing=processing.get('overwrite_existing', False),
+        parallel_processing=processing.get('parallel_processing', True),
+        max_workers=processing.get('max_workers', 0)
     )
 
 
@@ -128,7 +130,9 @@ def save_processing_config(config: ProcessingConfig) -> bool:
         'watermarks': [wm.to_dict() for wm in config.watermarks],
         'filename_prefix': config.filename_prefix,
         'filename_suffix': config.filename_suffix,
-        'overwrite_existing': config.overwrite_existing
+        'overwrite_existing': config.overwrite_existing,
+        'parallel_processing': config.parallel_processing,
+        'max_workers': config.max_workers
     }
     
     settings['processing'] = config_dict
