@@ -1,0 +1,26 @@
+# RKC Photography - Image Processing Application
+# Dependencies for PyWebView-based desktop application
+
+# GUI Framework - renders HTML/CSS/JS in desktop window
+pywebview>=4.0
+
+# Qt6 backend for PyWebView (works with Python 3.14+, no pythonnet required)
+PyQt6>=6.0
+PyQt6-WebEngine>=6.0
+qtpy>=2.0
+
+# HTTP server (required by pywebview)
+bottle>=0.12
+
+# Other pywebview dependencies
+proxy_tools
+typing_extensions
+
+# ImageMagick Python binding for image processing
+Wand>=0.6.0
+
+# Note: Wand requires ImageMagick to be installed on the system
+# Windows: Download from https://imagemagick.org/script/download.php
+#          Make sure to check "Install development headers and libraries" during installation
+# macOS: brew install imagemagick
+# Linux: sudo apt-get install libmagickwand-dev

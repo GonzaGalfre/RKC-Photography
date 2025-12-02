@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RKC Photography</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="logo">
+                <div class="logo-icon">
+                    <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect x="4" y="8" width="24" height="18" rx="2" stroke="currentColor" stroke-width="2"/>
+                        <circle cx="16" cy="17" r="5" stroke="currentColor" stroke-width="2"/>
+                        <circle cx="16" cy="17" r="2" fill="currentColor"/>
+                        <rect x="22" y="11" width="3" height="2" rx="0.5" fill="currentColor"/>
+                        <path d="M10 8V6C10 5.44772 10.4477 5 11 5H21C21.5523 5 22 5.44772 22 6V8" stroke="currentColor" stroke-width="2"/>
+                    </svg>
+                </div>
+                <span class="logo-text">RKC Photography</span>
+            </div>
+            
+            <nav class="nav-tabs">
+                <button class="nav-tab active" data-tab="settings">
+                    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="3"/>
+                        <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+                    </svg>
+                    Settings
+                </button>
+                <button class="nav-tab" data-tab="preview">
+                    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="3" width="18" height="18" rx="2"/>
+                        <circle cx="8.5" cy="8.5" r="1.5"/>
+                        <path d="M21 15l-5-5L5 21"/>
+                    </svg>
+                    Preview
+                </button>
+                <button class="nav-tab" data-tab="process">
+                    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+                    </svg>
+                    Process
+                </button>
+            </nav>
+            
+            <div class="sidebar-footer">
+                <div class="version-info">v1.0.0</div>
+            </div>
+        </aside>
+        
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Settings Tab -->
+            <section class="tab-content active" id="settings-tab">
+                <header class="tab-header">
+                    <h1>Processing Settings</h1>
+                    <p>Configure your image processing options</p>
+                </header>
+                
+                <div class="settings-grid">
+                    <!-- Folders Section -->
+                    <div class="settings-card">
+                        <h2 class="card-title">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/>
+                            </svg>
+                            Folders
+                        </h2>
+                        
+                        <div class="form-group">
+                            <label for="input-folder">Input Folder</label>
+                            <div class="input-with-button">
+                                <input type="text" id="input-folder" placeholder="Select folder with images..." readonly>
+                                <button class="btn-icon" id="btn-select-input" title="Browse">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/>
+                                    </svg>
+                                </button>
+                            </div>
+                            <span class="input-hint" id="input-count"></span>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="output-folder">Output Folder</label>
+                            <div class="input-with-button">
+                                <input type="text" id="output-folder" placeholder="Select output folder..." readonly>
+                                <button class="btn-icon" id="btn-select-output" title="Browse">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="overwrite-existing">
+                                <span class="checkbox-text">Overwrite existing files</span>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <!-- Border Section -->
+                    <div class="settings-card">
+                        <h2 class="card-title">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="3" y="3" width="18" height="18" rx="2"/>
+                            </svg>
+                            Border
+                        </h2>
+                        
+                        <div class="form-group">
+                            <label for="border-thickness">Thickness (pixels)</label>
+                            <div class="range-input">
+                                <input type="range" id="border-thickness" min="0" max="100" value="0">
+                                <input type="number" id="border-thickness-value" min="0" max="500" value="0">
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="border-color">Color</label>
+                            <div class="color-input">
+                                <input type="color" id="border-color" value="#FFFFFF">
+                                <input type="text" id="border-color-hex" value="#FFFFFF" placeholder="#FFFFFF">
+                            </div>
+                            <div class="color-presets">
+                                <button class="color-preset" data-color="#FFFFFF" style="background:#FFFFFF" title="White"></button>
+                                <button class="color-preset" data-color="#000000" style="background:#000000" title="Black"></button>
+                                <button class="color-preset" data-color="#1a1a1a" style="background:#1a1a1a" title="Dark Gray"></button>
+                                <button class="color-preset" data-color="#F5F5DC" style="background:#F5F5DC" title="Beige"></button>
+                                <button class="color-preset" data-color="#2C3E50" style="background:#2C3E50" title="Navy"></button>
+                                <button class="color-preset" data-color="#8B4513" style="background:#8B4513" title="Brown"></button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Watermark Section -->
+                    <div class="settings-card">
+                        <h2 class="card-title">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+                            </svg>
+                            Watermark
+                        </h2>
+                        
+                        <div class="form-group">
+                            <label for="watermark-file">Watermark Image</label>
+                            <div class="input-with-button">
+                                <input type="text" id="watermark-file" placeholder="Select watermark image..." readonly>
+                                <button class="btn-icon" id="btn-select-watermark" title="Browse">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/>
+                                    </svg>
+                                </button>
+                                <button class="btn-icon btn-clear" id="btn-clear-watermark" title="Clear">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <line x1="18" y1="6" x2="6" y2="18"/>
+                                        <line x1="6" y1="6" x2="18" y2="18"/>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Position</label>
+                            <div class="position-selector">
+                                <button class="position-btn active" data-position="center">
+                                    <span class="position-preview"><span class="dot center"></span></span>
+                                    Center
+                                </button>
+                                <button class="position-btn" data-position="bottom-right">
+                                    <span class="position-preview"><span class="dot bottom-right"></span></span>
+                                    Bottom Right
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="watermark-opacity">Opacity</label>
+                            <div class="range-input">
+                                <input type="range" id="watermark-opacity" min="0" max="100" value="50">
+                                <span class="range-value" id="watermark-opacity-value">50%</span>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="watermark-scale">Size (% of image)</label>
+                            <div class="range-input">
+                                <input type="range" id="watermark-scale" min="5" max="80" value="25">
+                                <span class="range-value" id="watermark-scale-value">25%</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Filename Options -->
+                    <div class="settings-card">
+                        <h2 class="card-title">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+                                <polyline points="14 2 14 8 20 8"/>
+                            </svg>
+                            Filename Options
+                        </h2>
+                        
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="filename-prefix">Prefix</label>
+                                <input type="text" id="filename-prefix" placeholder="e.g., processed_">
+                            </div>
+                            <div class="form-group">
+                                <label for="filename-suffix">Suffix</label>
+                                <input type="text" id="filename-suffix" placeholder="e.g., _edited">
+                            </div>
+                        </div>
+                        
+                        <div class="filename-preview">
+                            <span class="label">Preview:</span>
+                            <code id="filename-example">photo.jpg</code>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Preview Tab -->
+            <section class="tab-content" id="preview-tab">
+                <header class="tab-header">
+                    <h1>Preview</h1>
+                    <p>Test your settings on a sample image</p>
+                </header>
+                
+                <div class="preview-container">
+                    <div class="preview-controls">
+                        <button class="btn btn-primary" id="btn-select-preview-image">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="3" y="3" width="18" height="18" rx="2"/>
+                                <circle cx="8.5" cy="8.5" r="1.5"/>
+                                <path d="M21 15l-5-5L5 21"/>
+                            </svg>
+                            Select Image
+                        </button>
+                        <button class="btn btn-secondary" id="btn-refresh-preview" disabled>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M23 4v6h-6M1 20v-6h6"/>
+                                <path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/>
+                            </svg>
+                            Refresh
+                        </button>
+                    </div>
+                    
+                    <div class="preview-area">
+                        <div class="preview-placeholder" id="preview-placeholder">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                <rect x="3" y="3" width="18" height="18" rx="2"/>
+                                <circle cx="8.5" cy="8.5" r="1.5"/>
+                                <path d="M21 15l-5-5L5 21"/>
+                            </svg>
+                            <p>Select an image to preview your settings</p>
+                        </div>
+                        <img id="preview-image" class="preview-image hidden" alt="Preview">
+                        <div class="preview-loading hidden" id="preview-loading">
+                            <div class="spinner"></div>
+                            <p>Generating preview...</p>
+                        </div>
+                    </div>
+                    
+                    <div class="preview-info" id="preview-info"></div>
+                </div>
+            </section>
+            
+            <!-- Process Tab -->
+            <section class="tab-content" id="process-tab">
+                <header class="tab-header">
+                    <h1>Process Images</h1>
+                    <p>Start batch processing your images</p>
+                </header>
+                
+                <div class="process-container">
+                    <!-- Summary Card -->
+                    <div class="summary-card" id="process-summary">
+                        <div class="summary-row">
+                            <span class="summary-label">Input Folder:</span>
+                            <span class="summary-value" id="summary-input">Not selected</span>
+                        </div>
+                        <div class="summary-row">
+                            <span class="summary-label">Output Folder:</span>
+                            <span class="summary-value" id="summary-output">Not selected</span>
+                        </div>
+                        <div class="summary-row">
+                            <span class="summary-label">Images to Process:</span>
+                            <span class="summary-value" id="summary-count">0</span>
+                        </div>
+                        <div class="summary-row">
+                            <span class="summary-label">Border:</span>
+                            <span class="summary-value" id="summary-border">None</span>
+                        </div>
+                        <div class="summary-row">
+                            <span class="summary-label">Watermark:</span>
+                            <span class="summary-value" id="summary-watermark">None</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Validation Errors -->
+                    <div class="validation-errors hidden" id="validation-errors">
+                        <div class="error-header">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="10"/>
+                                <line x1="12" y1="8" x2="12" y2="12"/>
+                                <line x1="12" y1="16" x2="12.01" y2="16"/>
+                            </svg>
+                            <span>Please fix the following issues:</span>
+                        </div>
+                        <ul class="error-list" id="error-list"></ul>
+                    </div>
+                    
+                    <!-- Process Actions -->
+                    <div class="process-actions">
+                        <button class="btn btn-large btn-primary" id="btn-start-processing">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polygon points="5 3 19 12 5 21 5 3"/>
+                            </svg>
+                            Start Processing
+                        </button>
+                    </div>
+                    
+                    <!-- Progress Section -->
+                    <div class="progress-section hidden" id="progress-section">
+                        <div class="progress-header">
+                            <span class="progress-title">Processing...</span>
+                            <span class="progress-stats" id="progress-stats">0 / 0</span>
+                        </div>
+                        
+                        <div class="progress-bar-container">
+                            <div class="progress-bar" id="progress-bar" style="width: 0%"></div>
+                        </div>
+                        
+                        <div class="progress-details">
+                            <span class="current-file" id="current-file"></span>
+                            <span class="progress-percent" id="progress-percent">0%</span>
+                        </div>
+                        
+                        <button class="btn btn-danger" id="btn-cancel-processing">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="6" y="6" width="12" height="12"/>
+                            </svg>
+                            Cancel
+                        </button>
+                    </div>
+                    
+                    <!-- Results Section -->
+                    <div class="results-section hidden" id="results-section">
+                        <div class="results-header">
+                            <span class="results-icon success" id="results-icon">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M22 11.08V12a10 10 0 11-5.93-9.14"/>
+                                    <polyline points="22 4 12 14.01 9 11.01"/>
+                                </svg>
+                            </span>
+                            <h2 id="results-title">Processing Complete</h2>
+                        </div>
+                        
+                        <div class="results-stats">
+                            <div class="stat-card success">
+                                <span class="stat-number" id="stat-success">0</span>
+                                <span class="stat-label">Successful</span>
+                            </div>
+                            <div class="stat-card error">
+                                <span class="stat-number" id="stat-errors">0</span>
+                                <span class="stat-label">Errors</span>
+                            </div>
+                            <div class="stat-card skipped">
+                                <span class="stat-number" id="stat-skipped">0</span>
+                                <span class="stat-label">Skipped</span>
+                            </div>
+                        </div>
+                        
+                        <div class="results-actions">
+                            <button class="btn btn-primary" id="btn-open-output">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/>
+                                </svg>
+                                Open Output Folder
+                            </button>
+                            <button class="btn btn-secondary" id="btn-process-again">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M23 4v6h-6M1 20v-6h6"/>
+                                    <path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/>
+                                </svg>
+                                Process More
+                            </button>
+                        </div>
+                        
+                        <!-- Error Details -->
+                        <div class="error-details hidden" id="error-details">
+                            <h3>Error Details</h3>
+                            <div class="error-log" id="error-log"></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+    
+    <!-- Toast Container -->
+    <div class="toast-container" id="toast-container"></div>
+    
+    <script src="app.js"></script>
+</body>
+</html>
+
