@@ -25,6 +25,7 @@ PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, PROJECT_ROOT)
 
 from src.api import Api
+from src.config import clear_cache
 
 
 def get_ui_path() -> str:
@@ -199,6 +200,9 @@ def main():
     # Use Qt backend on Windows to avoid pythonnet dependency issues with newer Python versions
     # Other options: 'edgechromium', 'cef', 'mshtml', 'qt' (auto-detected)
     webview.start(debug=args.debug, gui='qt')
+    
+    # Clear cache on exit so the app starts fresh next time
+    clear_cache()
 
 
 if __name__ == '__main__':

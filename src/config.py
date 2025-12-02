@@ -161,3 +161,22 @@ def save_recent_folders(input_folder: str = '', output_folder: str = '') -> bool
         settings['recent_output_folder'] = output_folder
     return save_settings(settings)
 
+
+def clear_cache() -> bool:
+    """
+    Clear all cached settings.
+    
+    Deletes the settings file so the app starts fresh next time.
+    
+    Returns:
+        True if cache was cleared successfully, False otherwise
+    """
+    config_file = get_config_file()
+    
+    try:
+        if os.path.exists(config_file):
+            os.remove(config_file)
+        return True
+    except (IOError, OSError):
+        return False
+
