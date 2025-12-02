@@ -21,7 +21,12 @@ const state = {
     previewImagePath: '',
     imageCount: 0,
     isProcessing: false,
-    nextWatermarkId: 1
+    nextWatermarkId: 1,
+    // Time estimation
+    lastPreviewTime: null,  // Time in ms to generate last preview
+    estimatedTimePerImage: null,  // Estimated seconds per image (from preview × multiplier)
+    processingStartTime: null,  // When batch processing started
+    actualTimesPerImage: []  // Array of actual processing times for running average
 };
 
 // ==================== DOM Elements ====================
@@ -74,6 +79,7 @@ const elements = {
     summaryBorder: document.getElementById('summary-border'),
     summarySaturation: document.getElementById('summary-saturation'),
     summaryWatermark: document.getElementById('summary-watermark'),
+    summaryTimeEstimate: document.getElementById('summary-time-estimate'),
     validationErrors: document.getElementById('validation-errors'),
     errorList: document.getElementById('error-list'),
     btnStartProcessing: document.getElementById('btn-start-processing'),
@@ -84,6 +90,8 @@ const elements = {
     progressBar: document.getElementById('progress-bar'),
     currentFile: document.getElementById('current-file'),
     progressPercent: document.getElementById('progress-percent'),
+    timeRemaining: document.getElementById('time-remaining'),
+    processingSpeed: document.getElementById('processing-speed'),
     btnCancelProcessing: document.getElementById('btn-cancel-processing'),
     
     // Results
@@ -127,6 +135,35 @@ async function api(method, ...args) {
         console.error(`API error (${method}):`, error);
         showToast(`Error: ${error.message}`, 'error');
         throw error;
+    }
+}
+
+// ==================== Time Formatting ====================
+function formatDuration(seconds) {
+    if (seconds < 60) {
+        return `${Math.round(seconds)} sec`;
+    } else if (seconds < 3600) {
+        const mins = Math.floor(seconds / 60);
+        const secs = Math.round(seconds % 60);
+        return secs > 0 ? `${mins} min ${secs} sec` : `${mins} min`;
+    } else {
+        const hours = Math.floor(seconds / 3600);
+        const mins = Math.round((seconds % 3600) / 60);
+        return mins > 0 ? `${hours} hr ${mins} min` : `${hours} hr`;
+    }
+}
+
+function formatTimeRemaining(seconds) {
+    if (seconds < 60) {
+        return `~${Math.round(seconds)} seconds remaining`;
+    } else if (seconds < 3600) {
+        const mins = Math.floor(seconds / 60);
+        const secs = Math.round(seconds % 60);
+        return `~${mins}:${secs.toString().padStart(2, '0')} remaining`;
+    } else {
+        const hours = Math.floor(seconds / 3600);
+        const mins = Math.round((seconds % 3600) / 60);
+        return `~${hours}:${mins.toString().padStart(2, '0')}:00 remaining`;
     }
 }
 
@@ -529,8 +566,20 @@ async function generatePreview() {
     elements.previewImage.classList.add('hidden');
     elements.previewLoading.classList.remove('hidden');
     
+    // Track preview generation time
+    const startTime = performance.now();
+    
     try {
         const result = await api('generate_preview', state.config, state.previewImagePath);
+        
+        // Calculate preview time
+        const endTime = performance.now();
+        state.lastPreviewTime = endTime - startTime;
+        
+        // Estimate time per full-size image (preview is scaled to 800px, so multiply by factor)
+        // Factor accounts for: larger file size, no downscaling, disk I/O for saving
+        const PREVIEW_TO_FULL_MULTIPLIER = 2.0;
+        state.estimatedTimePerImage = (state.lastPreviewTime / 1000) * PREVIEW_TO_FULL_MULTIPLIER;
         
         if (result.success) {
             elements.previewImage.src = result.image_data;
@@ -588,6 +637,19 @@ function updateProcessSummary() {
     } else {
         elements.summaryWatermark.textContent = 'None';
     }
+    
+    // Time estimate
+    if (state.estimatedTimePerImage && state.imageCount > 0) {
+        const totalEstimate = state.estimatedTimePerImage * state.imageCount;
+        elements.summaryTimeEstimate.textContent = `~${formatDuration(totalEstimate)} (${state.imageCount} images)`;
+        elements.summaryTimeEstimate.classList.add('has-estimate');
+    } else if (state.imageCount > 0) {
+        elements.summaryTimeEstimate.textContent = 'Generate a preview to see estimate';
+        elements.summaryTimeEstimate.classList.remove('has-estimate');
+    } else {
+        elements.summaryTimeEstimate.textContent = 'Select input folder first';
+        elements.summaryTimeEstimate.classList.remove('has-estimate');
+    }
 }
 
 async function validateAndProcess() {
@@ -620,6 +682,8 @@ async function validateAndProcess() {
 
 async function startProcessing() {
     state.isProcessing = true;
+    state.processingStartTime = performance.now();
+    state.actualTimesPerImage = [];
     
     // Show progress section, hide others
     elements.progressSection.classList.remove('hidden');
@@ -631,6 +695,10 @@ async function startProcessing() {
     elements.progressStats.textContent = '0 / 0';
     elements.progressPercent.textContent = '0%';
     elements.currentFile.textContent = 'Starting...';
+    elements.timeRemaining.textContent = state.estimatedTimePerImage 
+        ? formatTimeRemaining(state.estimatedTimePerImage * state.imageCount)
+        : 'Calculating...';
+    elements.processingSpeed.textContent = '';
     
     // Start processing
     const result = await api('start_processing', state.config);
@@ -653,11 +721,33 @@ function resetProcessingUI() {
 }
 
 // ==================== Progress Callbacks ====================
+let lastProgressUpdate = { count: 0, time: 0 };
+
 window.onProcessingProgress = function(progress) {
     elements.progressBar.style.width = `${progress.progress_percent}%`;
     elements.progressStats.textContent = `${progress.processed_count} / ${progress.total_files}`;
     elements.progressPercent.textContent = `${Math.round(progress.progress_percent)}%`;
     elements.currentFile.textContent = progress.current_file || '';
+    
+    // Calculate time remaining based on actual processing speed
+    const now = performance.now();
+    const elapsedMs = now - state.processingStartTime;
+    
+    if (progress.processed_count > 0) {
+        // Calculate average time per image from actual processing
+        const avgTimePerImage = elapsedMs / progress.processed_count / 1000; // in seconds
+        const remainingImages = progress.total_files - progress.processed_count;
+        const timeRemaining = avgTimePerImage * remainingImages;
+        
+        // Update displays
+        elements.timeRemaining.textContent = remainingImages > 0 
+            ? formatTimeRemaining(timeRemaining)
+            : 'Almost done...';
+        elements.processingSpeed.textContent = `${avgTimePerImage.toFixed(1)} sec/image`;
+        
+        // Track for running average (update estimated time for future batches)
+        state.estimatedTimePerImage = avgTimePerImage;
+    }
 };
 
 window.onProcessingComplete = function(progress) {

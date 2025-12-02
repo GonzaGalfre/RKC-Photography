@@ -354,6 +354,10 @@
                             <span class="summary-label">Watermark:</span>
                             <span class="summary-value" id="summary-watermark">None</span>
                         </div>
+                        <div class="summary-row summary-row-estimate">
+                            <span class="summary-label">Estimated Time:</span>
+                            <span class="summary-value" id="summary-time-estimate">Generate a preview first</span>
+                        </div>
                     </div>
                     
                     <!-- Validation Errors -->
@@ -393,6 +397,11 @@
                         <div class="progress-details">
                             <span class="current-file" id="current-file"></span>
                             <span class="progress-percent" id="progress-percent">0%</span>
+                        </div>
+                        
+                        <div class="progress-time-info">
+                            <span class="time-remaining" id="time-remaining">Calculating...</span>
+                            <span class="processing-speed" id="processing-speed"></span>
                         </div>
                         
                         <button class="btn btn-danger" id="btn-cancel-processing">
