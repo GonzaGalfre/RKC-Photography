@@ -12,7 +12,7 @@ Design Decision: Using Wand instead of subprocess + CLI because:
 """
 
 import os
-from typing import Tuple, Optional, Literal
+from typing import Tuple, Optional, Literal, List
 from wand.image import Image
 from wand.color import Color
 from wand.exceptions import WandException
@@ -64,10 +64,18 @@ def add_border(
     image.border(border_color, thickness, thickness)
 
 
+# Valid watermark positions
+WATERMARK_POSITIONS = (
+    "top-left", "top", "top-right",
+    "left", "center", "right",
+    "bottom-left", "bottom", "bottom-right"
+)
+
+
 def add_watermark(
     image: Image,
     watermark_path: str,
-    position: Literal["center", "bottom-right"] = "center",
+    position: Literal["top-left", "top", "top-right", "left", "center", "right", "bottom-left", "bottom", "bottom-right"] = "center",
     opacity: float = 0.5,
     scale_percent: float = 25.0,
     margin: int = 20
@@ -78,10 +86,13 @@ def add_watermark(
     Args:
         image: Wand Image object to modify
         watermark_path: Path to the watermark image file
-        position: Where to place the watermark - "center" or "bottom-right" (border-corner)
+        position: Where to place the watermark:
+            - "top-left", "top", "top-right"
+            - "left", "center", "right"
+            - "bottom-left", "bottom", "bottom-right"
         opacity: Watermark opacity (0.0 = transparent, 1.0 = opaque)
         scale_percent: Scale watermark to this percentage of the main image's smaller dimension
-        margin: Margin in pixels from edges (for bottom-right position)
+        margin: Margin in pixels from edges
         
     Raises:
         FileNotFoundError: If watermark file doesn't exist
@@ -91,8 +102,8 @@ def add_watermark(
     if not os.path.exists(watermark_path):
         raise FileNotFoundError(f"Watermark file not found: {watermark_path}")
     
-    if position not in ("center", "bottom-right"):
-        raise ValueError(f"Invalid position: {position}. Use 'center' or 'bottom-right'")
+    if position not in WATERMARK_POSITIONS:
+        raise ValueError(f"Invalid position: {position}. Use one of {WATERMARK_POSITIONS}")
     
     if not (0.0 <= opacity <= 1.0):
         raise ValueError(f"Opacity must be between 0.0 and 1.0, got {opacity}")
@@ -122,12 +133,20 @@ def add_watermark(
         if opacity < 1.0:
             watermark.evaluate(operator='multiply', value=opacity, channel='alpha')
         
-        # Calculate position
-        if position == "center":
+        # Calculate horizontal position
+        if position in ("top-left", "left", "bottom-left"):
+            x = margin
+        elif position in ("top", "center", "bottom"):
             x = (image.width - watermark.width) // 2
-            y = (image.height - watermark.height) // 2
-        else:  # bottom-right
+        else:  # top-right, right, bottom-right
             x = image.width - watermark.width - margin
+        
+        # Calculate vertical position
+        if position in ("top-left", "top", "top-right"):
+            y = margin
+        elif position in ("left", "center", "right"):
+            y = (image.height - watermark.height) // 2
+        else:  # bottom-left, bottom, bottom-right
             y = image.height - watermark.height - margin
         
         # Ensure position is not negative
@@ -143,20 +162,16 @@ def process_single_image(
     output_path: str,
     border_thickness: Optional[int] = None,
     border_color: str = "#FFFFFF",
-    watermark_path: Optional[str] = None,
-    watermark_position: Literal["center", "bottom-right"] = "center",
-    watermark_opacity: float = 0.5,
-    watermark_scale: float = 25.0,
-    watermark_margin: int = 20,
+    watermarks: Optional[List[dict]] = None,
     preserve_format: bool = True
 ) -> dict:
     """
-    Process a single image: apply border and/or watermark, then save.
+    Process a single image: apply border and/or watermarks, then save.
     
     This function handles the complete pipeline for one image:
     1. Load the image
     2. Apply border (if specified)
-    3. Apply watermark (if specified)
+    3. Apply watermarks (if specified) - multiple watermarks supported
     4. Save to output path
     
     Args:
@@ -164,11 +179,12 @@ def process_single_image(
         output_path: Path where processed image will be saved
         border_thickness: Border thickness in pixels (None = no border)
         border_color: Border color as hex string
-        watermark_path: Path to watermark image (None = no watermark)
-        watermark_position: "center" or "bottom-right"
-        watermark_opacity: Watermark opacity (0.0-1.0)
-        watermark_scale: Watermark size as percentage of image
-        watermark_margin: Margin from edges in pixels
+        watermarks: List of watermark configs, each with keys:
+            - path: Path to watermark image
+            - position: One of the 9 positions
+            - opacity: 0.0-1.0
+            - scale: Percentage of image size
+            - margin: Pixels from edges
         preserve_format: If True, keep original format; if False, save as PNG
         
     Returns:
@@ -200,20 +216,22 @@ def process_single_image(
         
         # Load and process image
         with Image(filename=input_path) as img:
-            # Apply border first (so watermark goes on top of border if both applied)
+            # Apply border first (so watermarks go on top of border)
             if border_thickness is not None and border_thickness > 0:
                 add_border(img, border_thickness, border_color)
             
-            # Apply watermark
-            if watermark_path is not None:
-                add_watermark(
-                    img,
-                    watermark_path,
-                    position=watermark_position,
-                    opacity=watermark_opacity,
-                    scale_percent=watermark_scale,
-                    margin=watermark_margin
-                )
+            # Apply all watermarks in order
+            if watermarks:
+                for wm in watermarks:
+                    if wm.get('path'):
+                        add_watermark(
+                            img,
+                            wm['path'],
+                            position=wm.get('position', 'center'),
+                            opacity=wm.get('opacity', 0.5),
+                            scale_percent=wm.get('scale', 25.0),
+                            margin=wm.get('margin', 20)
+                        )
             
             # Save the processed image
             img.save(filename=output_path)
@@ -238,11 +256,7 @@ def generate_preview(
     input_path: str,
     border_thickness: Optional[int] = None,
     border_color: str = "#FFFFFF",
-    watermark_path: Optional[str] = None,
-    watermark_position: Literal["center", "bottom-right"] = "center",
-    watermark_opacity: float = 0.5,
-    watermark_scale: float = 25.0,
-    watermark_margin: int = 20,
+    watermarks: Optional[List[dict]] = None,
     max_preview_size: int = 800
 ) -> Tuple[Optional[bytes], Optional[str]]:
     """
@@ -252,7 +266,9 @@ def generate_preview(
     
     Args:
         input_path: Path to the source image
-        (other args same as process_single_image)
+        border_thickness: Border thickness in pixels
+        border_color: Border color as hex
+        watermarks: List of watermark configs (same format as process_single_image)
         max_preview_size: Maximum width or height for preview
         
     Returns:
@@ -272,16 +288,18 @@ def generate_preview(
             if border_thickness is not None and border_thickness > 0:
                 add_border(img, border_thickness, border_color)
             
-            # Apply watermark
-            if watermark_path is not None:
-                add_watermark(
-                    img,
-                    watermark_path,
-                    position=watermark_position,
-                    opacity=watermark_opacity,
-                    scale_percent=watermark_scale,
-                    margin=watermark_margin
-                )
+            # Apply all watermarks
+            if watermarks:
+                for wm in watermarks:
+                    if wm.get('path'):
+                        add_watermark(
+                            img,
+                            wm['path'],
+                            position=wm.get('position', 'center'),
+                            opacity=wm.get('opacity', 0.5),
+                            scale_percent=wm.get('scale', 25.0),
+                            margin=wm.get('margin', 20)
+                        )
             
             # Scale down for preview if needed
             if img.width > max_preview_size or img.height > max_preview_size:

@@ -19,8 +19,51 @@ from enum import Enum
 from .image_processor import (
     is_supported_format,
     process_single_image,
-    SUPPORTED_FORMATS
+    SUPPORTED_FORMATS,
+    WATERMARK_POSITIONS
 )
+
+
+@dataclass
+class WatermarkConfig:
+    """Configuration for a single watermark."""
+    path: str = ""
+    position: str = "center"
+    opacity: float = 0.5
+    scale: float = 25.0
+    margin: int = 20
+    
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "path": self.path,
+            "position": self.position,
+            "opacity": self.opacity,
+            "scale": self.scale,
+            "margin": self.margin
+        }
+    
+    @staticmethod
+    def from_dict(data: Dict[str, Any]) -> 'WatermarkConfig':
+        return WatermarkConfig(
+            path=data.get("path", ""),
+            position=data.get("position", "center"),
+            opacity=float(data.get("opacity", 0.5)),
+            scale=float(data.get("scale", 25.0)),
+            margin=int(data.get("margin", 20))
+        )
+    
+    def validate(self) -> List[str]:
+        """Validate this watermark config."""
+        errors = []
+        if self.path and not os.path.isfile(self.path):
+            errors.append(f"Watermark file not found: {self.path}")
+        if self.position not in WATERMARK_POSITIONS:
+            errors.append(f"Invalid watermark position: {self.position}")
+        if not (0.0 <= self.opacity <= 1.0):
+            errors.append("Watermark opacity must be between 0.0 and 1.0")
+        if not (1.0 <= self.scale <= 100.0):
+            errors.append("Watermark scale must be between 1.0 and 100.0")
+        return errors
 
 
 class ProcessingState(Enum):
@@ -43,11 +86,7 @@ class ProcessingConfig:
         output_folder: Destination folder for processed images
         border_thickness: Border thickness in pixels (0 = no border)
         border_color: Border color as hex string
-        watermark_path: Path to watermark image (empty = no watermark)
-        watermark_position: "center" or "bottom-right"
-        watermark_opacity: Opacity from 0.0 to 1.0
-        watermark_scale: Scale as percentage of image size
-        watermark_margin: Margin in pixels for corner positioning
+        watermarks: List of watermark configurations
         filename_prefix: Prefix to add to output filenames
         filename_suffix: Suffix to add to output filenames (before extension)
         overwrite_existing: If True, overwrite files in output folder
@@ -56,11 +95,7 @@ class ProcessingConfig:
     output_folder: str = ""
     border_thickness: int = 0
     border_color: str = "#FFFFFF"
-    watermark_path: str = ""
-    watermark_position: Literal["center", "bottom-right"] = "center"
-    watermark_opacity: float = 0.5
-    watermark_scale: float = 25.0
-    watermark_margin: int = 20
+    watermarks: List[WatermarkConfig] = field(default_factory=list)
     filename_prefix: str = ""
     filename_suffix: str = ""
     overwrite_existing: bool = False
@@ -82,15 +117,12 @@ class ProcessingConfig:
             
         if self.border_thickness < 0:
             errors.append("Border thickness cannot be negative")
-            
-        if self.watermark_path and not os.path.isfile(self.watermark_path):
-            errors.append(f"Watermark file does not exist: {self.watermark_path}")
-            
-        if not (0.0 <= self.watermark_opacity <= 1.0):
-            errors.append("Watermark opacity must be between 0.0 and 1.0")
-            
-        if not (1.0 <= self.watermark_scale <= 100.0):
-            errors.append("Watermark scale must be between 1.0 and 100.0")
+        
+        # Validate each watermark
+        for i, wm in enumerate(self.watermarks):
+            wm_errors = wm.validate()
+            for err in wm_errors:
+                errors.append(f"Watermark {i+1}: {err}")
             
         return errors
 
@@ -285,17 +317,25 @@ class BatchProcessor:
                         })
                     continue
                 
+                # Build watermarks list for processing
+                watermarks_data = []
+                for wm in config.watermarks:
+                    if wm.path:
+                        watermarks_data.append({
+                            'path': wm.path,
+                            'position': wm.position,
+                            'opacity': wm.opacity,
+                            'scale': wm.scale,
+                            'margin': wm.margin
+                        })
+                
                 # Process the image
                 result = process_single_image(
                     input_path=input_path,
                     output_path=output_path,
                     border_thickness=config.border_thickness if config.border_thickness > 0 else None,
                     border_color=config.border_color,
-                    watermark_path=config.watermark_path if config.watermark_path else None,
-                    watermark_position=config.watermark_position,
-                    watermark_opacity=config.watermark_opacity,
-                    watermark_scale=config.watermark_scale,
-                    watermark_margin=config.watermark_margin
+                    watermarks=watermarks_data if watermarks_data else None
                 )
                 
                 with self._lock:
@@ -396,10 +436,7 @@ def process_folder(
     output_folder: str,
     border_thickness: int = 0,
     border_color: str = "#FFFFFF",
-    watermark_path: str = "",
-    watermark_position: Literal["center", "bottom-right"] = "center",
-    watermark_opacity: float = 0.5,
-    watermark_scale: float = 25.0,
+    watermarks: Optional[List[WatermarkConfig]] = None,
     progress_callback: Optional[Callable[[ProcessingProgress], None]] = None
 ) -> ProcessingProgress:
     """
@@ -410,7 +447,9 @@ def process_folder(
     Args:
         input_folder: Source folder containing images
         output_folder: Destination folder for processed images
-        (other args: see ProcessingConfig)
+        border_thickness: Border thickness in pixels
+        border_color: Border color as hex
+        watermarks: List of WatermarkConfig objects
         progress_callback: Optional callback for progress updates
         
     Returns:
@@ -421,10 +460,7 @@ def process_folder(
         output_folder=output_folder,
         border_thickness=border_thickness,
         border_color=border_color,
-        watermark_path=watermark_path,
-        watermark_position=watermark_position,
-        watermark_opacity=watermark_opacity,
-        watermark_scale=watermark_scale
+        watermarks=watermarks or []
     )
     
     processor = BatchProcessor()

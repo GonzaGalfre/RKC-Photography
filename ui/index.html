@@ -141,62 +141,28 @@
                         </div>
                     </div>
                     
-                    <!-- Watermark Section -->
-                    <div class="settings-card">
+                    <!-- Watermarks Section -->
+                    <div class="settings-card settings-card-wide">
                         <h2 class="card-title">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
                             </svg>
-                            Watermark
+                            Watermarks
                         </h2>
                         
-                        <div class="form-group">
-                            <label for="watermark-file">Watermark Image</label>
-                            <div class="input-with-button">
-                                <input type="text" id="watermark-file" placeholder="Select watermark image..." readonly>
-                                <button class="btn-icon" id="btn-select-watermark" title="Browse">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/>
-                                    </svg>
-                                </button>
-                                <button class="btn-icon btn-clear" id="btn-clear-watermark" title="Clear">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <line x1="18" y1="6" x2="6" y2="18"/>
-                                        <line x1="6" y1="6" x2="18" y2="18"/>
-                                    </svg>
-                                </button>
-                            </div>
+                        <!-- Watermark List -->
+                        <div class="watermark-list" id="watermark-list">
+                            <!-- Watermark items will be added here dynamically -->
                         </div>
                         
-                        <div class="form-group">
-                            <label>Position</label>
-                            <div class="position-selector">
-                                <button class="position-btn active" data-position="center">
-                                    <span class="position-preview"><span class="dot center"></span></span>
-                                    Center
-                                </button>
-                                <button class="position-btn" data-position="bottom-right">
-                                    <span class="position-preview"><span class="dot bottom-right"></span></span>
-                                    Bottom Right
-                                </button>
-                            </div>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label for="watermark-opacity">Opacity</label>
-                            <div class="range-input">
-                                <input type="range" id="watermark-opacity" min="0" max="100" value="50">
-                                <span class="range-value" id="watermark-opacity-value">50%</span>
-                            </div>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label for="watermark-scale">Size (% of image)</label>
-                            <div class="range-input">
-                                <input type="range" id="watermark-scale" min="5" max="80" value="25">
-                                <span class="range-value" id="watermark-scale-value">25%</span>
-                            </div>
-                        </div>
+                        <!-- Add Watermark Button -->
+                        <button class="btn btn-secondary btn-add-watermark" id="btn-add-watermark">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="12" y1="5" x2="12" y2="19"/>
+                                <line x1="5" y1="12" x2="19" y2="12"/>
+                            </svg>
+                            Add Watermark
+                        </button>
                     </div>
                     
                     <!-- Filename Options -->

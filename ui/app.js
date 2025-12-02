@@ -12,18 +12,15 @@ const state = {
         output_folder: '',
         border_thickness: 0,
         border_color: '#FFFFFF',
-        watermark_path: '',
-        watermark_position: 'center',
-        watermark_opacity: 0.5,
-        watermark_scale: 25,
-        watermark_margin: 20,
+        watermarks: [],  // Array of {path, position, opacity, scale, margin}
         filename_prefix: '',
         filename_suffix: '',
         overwrite_existing: false
     },
     previewImagePath: '',
     imageCount: 0,
-    isProcessing: false
+    isProcessing: false,
+    nextWatermarkId: 1
 };
 
 // ==================== DOM Elements ====================
@@ -47,15 +44,9 @@ const elements = {
     borderColorHex: document.getElementById('border-color-hex'),
     colorPresets: document.querySelectorAll('.color-preset'),
     
-    // Settings - Watermark
-    watermarkFile: document.getElementById('watermark-file'),
-    btnSelectWatermark: document.getElementById('btn-select-watermark'),
-    btnClearWatermark: document.getElementById('btn-clear-watermark'),
-    positionBtns: document.querySelectorAll('.position-btn'),
-    watermarkOpacity: document.getElementById('watermark-opacity'),
-    watermarkOpacityValue: document.getElementById('watermark-opacity-value'),
-    watermarkScale: document.getElementById('watermark-scale'),
-    watermarkScaleValue: document.getElementById('watermark-scale-value'),
+    // Settings - Watermarks
+    watermarkList: document.getElementById('watermark-list'),
+    btnAddWatermark: document.getElementById('btn-add-watermark'),
     
     // Settings - Filename
     filenamePrefix: document.getElementById('filename-prefix'),
@@ -168,18 +159,11 @@ function syncUIToState() {
     state.config.output_folder = elements.outputFolder.value;
     state.config.border_thickness = parseInt(elements.borderThicknessValue.value) || 0;
     state.config.border_color = elements.borderColor.value;
-    state.config.watermark_path = elements.watermarkFile.value;
-    state.config.watermark_opacity = parseInt(elements.watermarkOpacity.value) / 100;
-    state.config.watermark_scale = parseInt(elements.watermarkScale.value);
     state.config.filename_prefix = elements.filenamePrefix.value;
     state.config.filename_suffix = elements.filenameSuffix.value;
     state.config.overwrite_existing = elements.overwriteExisting.checked;
     
-    // Get active position
-    const activePosition = document.querySelector('.position-btn.active');
-    if (activePosition) {
-        state.config.watermark_position = activePosition.dataset.position;
-    }
+    // Watermarks are synced in real-time via their event handlers
 }
 
 function syncStateToUI() {
@@ -189,19 +173,12 @@ function syncStateToUI() {
     elements.borderThicknessValue.value = state.config.border_thickness;
     elements.borderColor.value = state.config.border_color;
     elements.borderColorHex.value = state.config.border_color;
-    elements.watermarkFile.value = state.config.watermark_path;
-    elements.watermarkOpacity.value = Math.round(state.config.watermark_opacity * 100);
-    elements.watermarkOpacityValue.textContent = `${Math.round(state.config.watermark_opacity * 100)}%`;
-    elements.watermarkScale.value = state.config.watermark_scale;
-    elements.watermarkScaleValue.textContent = `${state.config.watermark_scale}%`;
     elements.filenamePrefix.value = state.config.filename_prefix;
     elements.filenameSuffix.value = state.config.filename_suffix;
     elements.overwriteExisting.checked = state.config.overwrite_existing;
     
-    // Update position buttons
-    elements.positionBtns.forEach(btn => {
-        btn.classList.toggle('active', btn.dataset.position === state.config.watermark_position);
-    });
+    // Render watermarks
+    renderWatermarkList();
     
     updateFilenameExample();
     updateImageCount();
@@ -290,24 +267,185 @@ function setColorPreset(color) {
     state.config.border_color = color;
 }
 
-// ==================== Watermark Settings ====================
-function setWatermarkPosition(position) {
-    elements.positionBtns.forEach(btn => {
-        btn.classList.toggle('active', btn.dataset.position === position);
+// ==================== Watermark Management ====================
+function createWatermarkItem(watermark, index) {
+    const filename = watermark.path ? watermark.path.split(/[\\/]/).pop() : 'No file selected';
+    
+    return `
+        <div class="watermark-item" data-watermark-id="${watermark.id}">
+            <div class="watermark-item-header">
+                <div class="watermark-item-title">
+                    <span class="watermark-item-number">${index + 1}</span>
+                    <span class="watermark-item-filename">${filename}</span>
+                </div>
+                <button class="btn-remove-watermark" data-id="${watermark.id}" title="Remove watermark">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"/>
+                        <line x1="6" y1="6" x2="18" y2="18"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="watermark-item-content">
+                <div class="watermark-item-left">
+                    <div class="watermark-file-input">
+                        <input type="text" value="${watermark.path}" placeholder="Select watermark image..." readonly data-id="${watermark.id}" class="watermark-path-input">
+                        <button class="btn-icon btn-select-wm-file" data-id="${watermark.id}" title="Browse">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="position-grid" data-id="${watermark.id}">
+                        ${['top-left', 'top', 'top-right', 'left', 'center', 'right', 'bottom-left', 'bottom', 'bottom-right'].map(pos => `
+                            <button class="position-btn ${watermark.position === pos ? 'active' : ''}" data-position="${pos}" data-id="${watermark.id}" title="${pos}">
+                                <span class="position-preview"><span class="dot ${pos}"></span></span>
+                            </button>
+                        `).join('')}
+                    </div>
+                </div>
+                <div class="watermark-item-right">
+                    <div class="watermark-slider-group">
+                        <label>Opacity</label>
+                        <div class="range-input">
+                            <input type="range" min="0" max="100" value="${Math.round(watermark.opacity * 100)}" data-id="${watermark.id}" class="wm-opacity-slider">
+                            <span class="range-value wm-opacity-value" data-id="${watermark.id}">${Math.round(watermark.opacity * 100)}%</span>
+                        </div>
+                    </div>
+                    <div class="watermark-slider-group">
+                        <label>Size (% of image)</label>
+                        <div class="range-input">
+                            <input type="range" min="5" max="80" value="${watermark.scale}" data-id="${watermark.id}" class="wm-scale-slider">
+                            <span class="range-value wm-scale-value" data-id="${watermark.id}">${watermark.scale}%</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function renderWatermarkList() {
+    if (state.config.watermarks.length === 0) {
+        elements.watermarkList.innerHTML = `
+            <div class="watermark-empty">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+                </svg>
+                <p>No watermarks added yet</p>
+            </div>
+        `;
+    } else {
+        elements.watermarkList.innerHTML = state.config.watermarks
+            .map((wm, i) => createWatermarkItem(wm, i))
+            .join('');
+    }
+    
+    // Attach event listeners to new elements
+    attachWatermarkListeners();
+}
+
+function attachWatermarkListeners() {
+    // Remove buttons
+    document.querySelectorAll('.btn-remove-watermark').forEach(btn => {
+        btn.addEventListener('click', () => removeWatermark(parseInt(btn.dataset.id)));
     });
-    state.config.watermark_position = position;
+    
+    // File selection buttons
+    document.querySelectorAll('.btn-select-wm-file').forEach(btn => {
+        btn.addEventListener('click', () => selectWatermarkFile(parseInt(btn.dataset.id)));
+    });
+    
+    // File input click
+    document.querySelectorAll('.watermark-path-input').forEach(input => {
+        input.addEventListener('click', () => selectWatermarkFile(parseInt(input.dataset.id)));
+    });
+    
+    // Position buttons
+    document.querySelectorAll('.watermark-item .position-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const id = parseInt(btn.dataset.id);
+            const position = btn.dataset.position;
+            setWatermarkPosition(id, position);
+        });
+    });
+    
+    // Opacity sliders
+    document.querySelectorAll('.wm-opacity-slider').forEach(slider => {
+        slider.addEventListener('input', () => {
+            const id = parseInt(slider.dataset.id);
+            updateWatermarkOpacity(id, parseInt(slider.value));
+        });
+    });
+    
+    // Scale sliders
+    document.querySelectorAll('.wm-scale-slider').forEach(slider => {
+        slider.addEventListener('input', () => {
+            const id = parseInt(slider.dataset.id);
+            updateWatermarkScale(id, parseInt(slider.value));
+        });
+    });
 }
 
-function updateWatermarkOpacity() {
-    const value = elements.watermarkOpacity.value;
-    elements.watermarkOpacityValue.textContent = `${value}%`;
-    state.config.watermark_opacity = parseInt(value) / 100;
+function addWatermark() {
+    const newWatermark = {
+        id: state.nextWatermarkId++,
+        path: '',
+        position: 'center',
+        opacity: 0.5,
+        scale: 25,
+        margin: 20
+    };
+    state.config.watermarks.push(newWatermark);
+    renderWatermarkList();
 }
 
-function updateWatermarkScale() {
-    const value = elements.watermarkScale.value;
-    elements.watermarkScaleValue.textContent = `${value}%`;
-    state.config.watermark_scale = parseInt(value);
+function removeWatermark(id) {
+    state.config.watermarks = state.config.watermarks.filter(wm => wm.id !== id);
+    renderWatermarkList();
+}
+
+async function selectWatermarkFile(id) {
+    const file = await api('select_watermark_file');
+    if (file) {
+        const wm = state.config.watermarks.find(w => w.id === id);
+        if (wm) {
+            wm.path = file;
+            renderWatermarkList();
+            showToast('Watermark selected', 'success');
+        }
+    }
+}
+
+function setWatermarkPosition(id, position) {
+    const wm = state.config.watermarks.find(w => w.id === id);
+    if (wm) {
+        wm.position = position;
+        // Update UI
+        const grid = document.querySelector(`.position-grid[data-id="${id}"]`);
+        if (grid) {
+            grid.querySelectorAll('.position-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.position === position);
+            });
+        }
+    }
+}
+
+function updateWatermarkOpacity(id, value) {
+    const wm = state.config.watermarks.find(w => w.id === id);
+    if (wm) {
+        wm.opacity = value / 100;
+        const valueEl = document.querySelector(`.wm-opacity-value[data-id="${id}"]`);
+        if (valueEl) valueEl.textContent = `${value}%`;
+    }
+}
+
+function updateWatermarkScale(id, value) {
+    const wm = state.config.watermarks.find(w => w.id === id);
+    if (wm) {
+        wm.scale = value;
+        const valueEl = document.querySelector(`.wm-scale-value[data-id="${id}"]`);
+        if (valueEl) valueEl.textContent = `${value}%`;
+    }
 }
 
 // ==================== Filename Preview ====================
@@ -378,9 +516,9 @@ function updateProcessSummary() {
     }
     
     // Watermark summary
-    if (state.config.watermark_path) {
-        const filename = state.config.watermark_path.split(/[\\/]/).pop();
-        elements.summaryWatermark.textContent = `${filename} (${state.config.watermark_position})`;
+    const activeWatermarks = state.config.watermarks.filter(wm => wm.path);
+    if (activeWatermarks.length > 0) {
+        elements.summaryWatermark.textContent = `${activeWatermarks.length} watermark${activeWatermarks.length > 1 ? 's' : ''}`;
     } else {
         elements.summaryWatermark.textContent = 'None';
     }
@@ -561,14 +699,10 @@ function setupEventListeners() {
     });
     
     // Watermark settings
-    elements.btnSelectWatermark.addEventListener('click', selectWatermarkFile);
-    elements.watermarkFile.addEventListener('click', selectWatermarkFile);
-    elements.btnClearWatermark.addEventListener('click', clearWatermark);
-    elements.positionBtns.forEach(btn => {
-        btn.addEventListener('click', () => setWatermarkPosition(btn.dataset.position));
-    });
-    elements.watermarkOpacity.addEventListener('input', updateWatermarkOpacity);
-    elements.watermarkScale.addEventListener('input', updateWatermarkScale);
+    elements.btnAddWatermark.addEventListener('click', addWatermark);
+    
+    // Initial render of watermark list
+    renderWatermarkList();
     
     // Filename settings
     elements.filenamePrefix.addEventListener('input', updateFilenameExample);

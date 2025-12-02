@@ -10,7 +10,7 @@ import json
 from typing import Dict, Any, Optional
 from dataclasses import asdict
 
-from .batch_processor import ProcessingConfig
+from .batch_processor import ProcessingConfig, WatermarkConfig
 
 
 def get_config_dir() -> str:
@@ -85,16 +85,24 @@ def load_processing_config() -> ProcessingConfig:
     settings = load_settings()
     processing = settings.get('processing', {})
     
+    # Load watermarks list
+    watermarks = []
+    watermarks_data = processing.get('watermarks', [])
+    for wm_data in watermarks_data:
+        watermarks.append(WatermarkConfig(
+            path=wm_data.get('path', ''),
+            position=wm_data.get('position', 'center'),
+            opacity=wm_data.get('opacity', 0.5),
+            scale=wm_data.get('scale', 25.0),
+            margin=wm_data.get('margin', 20)
+        ))
+    
     return ProcessingConfig(
         input_folder=processing.get('input_folder', ''),
         output_folder=processing.get('output_folder', ''),
         border_thickness=processing.get('border_thickness', 0),
         border_color=processing.get('border_color', '#FFFFFF'),
-        watermark_path=processing.get('watermark_path', ''),
-        watermark_position=processing.get('watermark_position', 'center'),
-        watermark_opacity=processing.get('watermark_opacity', 0.5),
-        watermark_scale=processing.get('watermark_scale', 25.0),
-        watermark_margin=processing.get('watermark_margin', 20),
+        watermarks=watermarks,
         filename_prefix=processing.get('filename_prefix', ''),
         filename_suffix=processing.get('filename_suffix', ''),
         overwrite_existing=processing.get('overwrite_existing', False)
@@ -108,7 +116,20 @@ def save_processing_config(config: ProcessingConfig) -> bool:
     Preserves other settings in the file.
     """
     settings = load_settings()
-    settings['processing'] = asdict(config)
+    
+    # Convert config to dict, handling watermarks specially
+    config_dict = {
+        'input_folder': config.input_folder,
+        'output_folder': config.output_folder,
+        'border_thickness': config.border_thickness,
+        'border_color': config.border_color,
+        'watermarks': [wm.to_dict() for wm in config.watermarks],
+        'filename_prefix': config.filename_prefix,
+        'filename_suffix': config.filename_suffix,
+        'overwrite_existing': config.overwrite_existing
+    }
+    
+    settings['processing'] = config_dict
     return save_settings(settings)
 
 

@@ -23,7 +23,8 @@ from .batch_processor import (
     BatchProcessor,
     ProcessingConfig,
     ProcessingProgress,
-    ProcessingState
+    ProcessingState,
+    WatermarkConfig
 )
 from .config import (
     load_processing_config,
@@ -235,16 +236,25 @@ class Api:
             Dictionary with 'valid' (bool) and 'errors' (list of strings)
         """
         try:
+            # Build watermarks list
+            watermarks = []
+            watermarks_data = config_dict.get('watermarks', [])
+            for wm in watermarks_data:
+                if wm.get('path'):
+                    watermarks.append(WatermarkConfig(
+                        path=wm.get('path', ''),
+                        position=wm.get('position', 'center'),
+                        opacity=float(wm.get('opacity', 0.5)),
+                        scale=float(wm.get('scale', 25.0)),
+                        margin=int(wm.get('margin', 20))
+                    ))
+            
             config = ProcessingConfig(
                 input_folder=config_dict.get('input_folder', ''),
                 output_folder=config_dict.get('output_folder', ''),
                 border_thickness=int(config_dict.get('border_thickness', 0)),
                 border_color=config_dict.get('border_color', '#FFFFFF'),
-                watermark_path=config_dict.get('watermark_path', ''),
-                watermark_position=config_dict.get('watermark_position', 'center'),
-                watermark_opacity=float(config_dict.get('watermark_opacity', 0.5)),
-                watermark_scale=float(config_dict.get('watermark_scale', 25.0)),
-                watermark_margin=int(config_dict.get('watermark_margin', 20)),
+                watermarks=watermarks,
                 filename_prefix=config_dict.get('filename_prefix', ''),
                 filename_suffix=config_dict.get('filename_suffix', ''),
                 overwrite_existing=bool(config_dict.get('overwrite_existing', False))
@@ -277,15 +287,24 @@ class Api:
                 - error: error message (if not success)
         """
         try:
+            # Build watermarks list
+            watermarks = []
+            watermarks_data = config_dict.get('watermarks', [])
+            for wm in watermarks_data:
+                if wm.get('path'):
+                    watermarks.append({
+                        'path': wm.get('path', ''),
+                        'position': wm.get('position', 'center'),
+                        'opacity': float(wm.get('opacity', 0.5)),
+                        'scale': float(wm.get('scale', 25.0)),
+                        'margin': int(wm.get('margin', 20))
+                    })
+            
             image_bytes, error = generate_preview(
                 input_path=image_path,
                 border_thickness=int(config_dict.get('border_thickness', 0)) or None,
                 border_color=config_dict.get('border_color', '#FFFFFF'),
-                watermark_path=config_dict.get('watermark_path', '') or None,
-                watermark_position=config_dict.get('watermark_position', 'center'),
-                watermark_opacity=float(config_dict.get('watermark_opacity', 0.5)),
-                watermark_scale=float(config_dict.get('watermark_scale', 25.0)),
-                watermark_margin=int(config_dict.get('watermark_margin', 20))
+                watermarks=watermarks if watermarks else None
             )
             
             if error:
@@ -345,16 +364,25 @@ class Api:
             Dictionary with 'success' and optional 'error'
         """
         try:
+            # Build watermarks list
+            watermarks = []
+            watermarks_data = config_dict.get('watermarks', [])
+            for wm in watermarks_data:
+                if wm.get('path'):
+                    watermarks.append(WatermarkConfig(
+                        path=wm.get('path', ''),
+                        position=wm.get('position', 'center'),
+                        opacity=float(wm.get('opacity', 0.5)),
+                        scale=float(wm.get('scale', 25.0)),
+                        margin=int(wm.get('margin', 20))
+                    ))
+            
             config = ProcessingConfig(
                 input_folder=config_dict.get('input_folder', ''),
                 output_folder=config_dict.get('output_folder', ''),
                 border_thickness=int(config_dict.get('border_thickness', 0)),
                 border_color=config_dict.get('border_color', '#FFFFFF'),
-                watermark_path=config_dict.get('watermark_path', ''),
-                watermark_position=config_dict.get('watermark_position', 'center'),
-                watermark_opacity=float(config_dict.get('watermark_opacity', 0.5)),
-                watermark_scale=float(config_dict.get('watermark_scale', 25.0)),
-                watermark_margin=int(config_dict.get('watermark_margin', 20)),
+                watermarks=watermarks,
                 filename_prefix=config_dict.get('filename_prefix', ''),
                 filename_suffix=config_dict.get('filename_suffix', ''),
                 overwrite_existing=bool(config_dict.get('overwrite_existing', False))

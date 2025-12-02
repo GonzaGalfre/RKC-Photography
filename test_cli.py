@@ -36,6 +36,7 @@ from src.batch_processor import (
     ProcessingConfig,
     ProcessingProgress,
     ProcessingState,
+    WatermarkConfig,
     process_folder
 )
 
@@ -79,15 +80,23 @@ def process_single(args) -> int:
         print(f"  Watermark: {args.watermark}, position: {args.wm_position}")
     print()
     
+    # Build watermarks list
+    watermarks = None
+    if args.watermark:
+        watermarks = [{
+            'path': args.watermark,
+            'position': args.wm_position,
+            'opacity': args.wm_opacity,
+            'scale': args.wm_scale,
+            'margin': 20
+        }]
+    
     result = process_single_image(
         input_path=args.single,
         output_path=args.output,
         border_thickness=args.border if args.border > 0 else None,
         border_color=args.border_color,
-        watermark_path=args.watermark if args.watermark else None,
-        watermark_position=args.wm_position,
-        watermark_opacity=args.wm_opacity,
-        watermark_scale=args.wm_scale
+        watermarks=watermarks
     )
     
     if result["success"]:
@@ -132,16 +141,24 @@ def process_batch(args) -> int:
         print("No supported images found in input folder.")
         return 1
     
+    # Build watermarks list
+    watermarks = []
+    if args.watermark:
+        watermarks.append(WatermarkConfig(
+            path=args.watermark,
+            position=args.wm_position,
+            opacity=args.wm_opacity,
+            scale=args.wm_scale,
+            margin=20
+        ))
+    
     # Process
     final_progress = process_folder(
         input_folder=args.input,
         output_folder=args.output,
         border_thickness=args.border,
         border_color=args.border_color,
-        watermark_path=args.watermark if args.watermark else "",
-        watermark_position=args.wm_position,
-        watermark_opacity=args.wm_opacity,
-        watermark_scale=args.wm_scale,
+        watermarks=watermarks,
         progress_callback=print_progress
     )
     
